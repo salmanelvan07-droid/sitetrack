@@ -197,6 +197,11 @@ function veriAl(sessiz, zorla) {
   }, function (e) { if (!sessiz || e.kod) hata(e); throw e; });
 }
 function baslat() {
+  var bq = (new URLSearchParams(location.search)).get('bag');
+  if (bq) {
+    if (tok()) { if (history.replaceState) history.replaceState(null, '', location.pathname); setTimeout(function () { toast(L('Bu cihaz zaten bir hesaba bağlı', 'This device is already linked to an account'), 4000); }, 600); }
+    else { S.kayitMod = 'bag'; S.bagKod = bq.replace(/\D/g, '').slice(0, 6); }
+  }
   if (!S.dil) { S.scr = 'dil'; return render(); }
   if (!tok()) { S.scr = 'kayit'; return render(); }
   var c = ls(K.D), b = ls(K.ben);
@@ -242,6 +247,8 @@ var I = {
   globe: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
   layers: svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
+  link: svg('<rect x="2" y="5" width="12" height="9" rx="1.5"/><path d="M5 18h6M8 14v4"/><rect x="16" y="8" width="6" height="12" rx="1.5"/><path d="M18.5 17.5h1"/>'),
+  devices: svg('<rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/>'),
   sync: svg('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M4 4v4h4M20 20v-4h-4"/>')
 };
 
@@ -266,7 +273,15 @@ function vKayit() {
   }
   var kod = (new URLSearchParams(location.search)).get('kod') || '';
   var kodAc = S.kodAc || !!kod;
-  return gate('<div class="h">' + L('Kayıt ol', 'Register') + '</div>' +
+  var sekmeler = '<div class="seg sm"><button class="' + (S.kayitMod !== 'bag' ? 'on' : '') + '" onclick="kayitTut();S.kayitMod=\'yeni\';S.kayitHata=\'\';render()">' + L('Yeni kayıt', 'New registration') + '</button>' +
+    '<button class="' + (S.kayitMod === 'bag' ? 'on' : '') + '" onclick="kayitTut();S.kayitMod=\'bag\';S.kayitHata=\'\';render()">' + L('Hesabım var', 'I have an account') + '</button></div>';
+  if (S.kayitMod === 'bag') return gate(sekmeler + '<div class="h">' + L('Bu cihazı hesabına bağla', 'Link this device') + '</div>' +
+    '<div class="mut" style="font-size:14px;line-height:1.5">' + L('Giriş yapmış olduğun telefonda <b>Diğer › Başka cihazda aç</b> ekranını aç. Oradaki 6 haneli kodu buraya yaz ya da QR kodu bu cihazın kamerasıyla okut. Kod 10 dakika geçerlidir.', 'On the device where you are signed in, open <b>More › Open on another device</b>. Type the 6-digit code here or scan the QR code with this device’s camera. The code is valid for 10 minutes.') + '</div>' +
+    (S.kayitHata ? '<div class="banner bad">' + esc(S.kayitHata) + '</div>' : '') +
+    '<div class="field"><label for="bKod">' + L('Bağlama kodu', 'Link code') + '</label><input id="bKod" class="inp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" style="font:800 28px Manrope,sans-serif;letter-spacing:.3em;text-align:center;height:64px" value="' + esc(S.bagKod || '') + '" onkeydown="if(event.key===\'Enter\')cihazBagla()"></div>' +
+    '<button class="btn acc full" id="bBtn" onclick="cihazBagla()">' + L('Cihazı bağla', 'Link device') + '</button>' +
+    '<button class="lnk" style="align-self:center" onclick="S.scr=\'dil\';render()">' + I.globe.replace('22', '16').replace('22', '16') + ' ' + (S.dil === 'EN' ? 'English' : 'Türkçe') + '</button>');
+  return gate(sekmeler + '<div class="h">' + L('Kayıt ol', 'Register') + '</div>' +
     '<div class="mut" style="font-size:14px;line-height:1.45">' + L('Adınızı ve firmanızı girin. Kaydınız MRAC tarafından onaylandıktan sonra veri girişine başlayabilirsiniz. Google hesabı gerekmez.', 'Enter your name and company. Once MRAC approves your registration you can start entering data. No Google account needed.') + '</div>' +
     (DEMO ? '<div class="banner info">' + L('DEMO: ilk yönetici olmak için “Kurulum kodum var” → 123456. Veriler yalnızca bu tarayıcıda tutulur.', 'DEMO: to become the first admin use “I have a setup code” → 123456. Data stays in this browser only.') + '</div>' : '') +
     (S.kayitHata ? '<div class="banner bad">' + esc(S.kayitHata) + '</div>' : '') +
@@ -278,6 +293,24 @@ function vKayit() {
     '<button class="btn acc full" id="kBtn" onclick="kayitOl()">' + L('Kaydı gönder', 'Send registration') + '</button>' +
     '<button class="lnk" style="align-self:center" onclick="S.scr=\'dil\';render()">' + I.globe.replace('22', '16').replace('22', '16') + ' ' + (S.dil === 'EN' ? 'English' : 'Türkçe') + '</button>');
 }
+function cihazAdi() {
+  var ua = navigator.userAgent || '', os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android telefon' : 'Android tablet') : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Cihaz';
+  var br = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\//.test(ua) ? 'Firefox' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  var pwa = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ? ' · ' + L('uygulama', 'app') : '';
+  return os + (br ? ' · ' + br : '') + pwa;
+}
+function cihazBagla() {
+  var k = ($('bKod') ? $('bKod').value : S.bagKod || '').replace(/\D/g, '');
+  S.bagKod = k;
+  if (k.length !== 6) return toast(L('6 haneli kodu girin', 'Enter the 6-digit code'));
+  if ($('bBtn')) $('bBtn').disabled = true;
+  api('bagla', { kod: k, cihaz: cihazAdi() }).then(function (r) {
+    ls(K.tok, r.anahtar); ls(K.ben, r.kullanici); S.bagKod = ''; S.kayitMod = '';
+    if (history.replaceState) history.replaceState(null, '', location.pathname);
+    toast(L('Cihaz bağlandı: ', 'Device linked: ') + r.kullanici.ad);
+    veriAl();
+  }, function (e) { S.kayitHata = String(e.message || e); render(); });
+}
 function kayitTut() { var a = $('kAd'), f = $('kFirma'); if (a) S.kAd = a.value; if (f) S.kFirma = f.value; }
 function kayitOl() {
   kayitTut();
@@ -285,7 +318,16 @@ function kayitOl() {
   if (ad.length < 3) return toast(L('Ad soyad girin', 'Enter your full name'));
   if (!fi && !kd) return toast(L('Firma seçin', 'Select a company'));
   $('kBtn').disabled = true;
-  api('kayit', { ad: ad, firma: fi || 'MRAC', dil: S.dil, kurulumKodu: kd }).then(function (r) {
+  api('kayit', { ad: ad, firma: fi || 'MRAC', dil: S.dil, kurulumKodu: kd, cihaz: cihazAdi(), zorla: !!S.kayitZorla }).then(function (r) {
+    if (r.uyari === 'AYNI_AD') {
+      $('kBtn').disabled = false;
+      return soru(L('Bu adla bir hesap var', 'An account with this name exists'),
+        L('<b>' + esc(ad) + '</b> · ' + esc(fi) + ' adına onaylı bir hesap zaten var. Bu sizseniz yeni kayıt yerine bu cihazı mevcut hesabınıza bağlayın: diğer cihazınızda <b>Diğer › Başka cihazda aç</b> ile kod alın.',
+          'An approved account for <b>' + esc(ad) + '</b> · ' + esc(fi) + ' already exists. If that is you, link this device instead of registering again: get a code on your other device under <b>More › Open on another device</b>.'),
+        L('Kodum var', 'I have a code'), function () { S.kayitMod = 'bag'; render(); }, 'acc', L('Yine de kayıt ol', 'Register anyway'),
+        function () { S.kayitZorla = true; kayitOl(); }, true);
+    }
+    S.kayitZorla = false;
     ls(K.tok, r.anahtar); ls(K.ben, r.kullanici);
     if (history.replaceState) history.replaceState(null, '', location.pathname);
     if (r.kullanici.durum === 'ONAYLI') { toast(L('Yönetici olarak kaydedildiniz', 'Registered as administrator')); veriAl(); }
@@ -315,13 +357,14 @@ function cihazCik(sor) {
 /* ================= modal ================= */
 var MODAL_CB = null, MODAL_IPTAL = null;
 function modalSil() { var m = $('modal'); if (m) m.remove(); }
-function soru(baslik, govde, evet, cb, tur, hayir, iptal) {
-  modalSil(); MODAL_CB = cb; MODAL_IPTAL = iptal || null;
+var MODAL_ARKA = true;
+function soru(baslik, govde, evet, cb, tur, hayir, iptal, arkaKapatmaz) {
+  modalSil(); MODAL_CB = cb; MODAL_IPTAL = iptal || null; MODAL_ARKA = !arkaKapatmaz;
   var m = document.createElement('div'); m.id = 'modal';
   m.innerHTML = '<div class="box" role="dialog" aria-modal="true"><div class="h">' + baslik + '</div><div style="font-size:14.5px;line-height:1.45;color:var(--ink2)">' + (govde || '') + '</div>' +
     '<div class="acts"><button class="btn soft" onclick="modalKapat()">' + (hayir || L('Vazgeç', 'Cancel')) + '</button>' +
     (evet ? '<button class="btn ' + (tur || 'acc') + '" onclick="modalEvet()">' + evet + '</button>' : '') + '</div></div>';
-  m.addEventListener('click', function (e) { if (e.target === m) modalKapat(); });
+  m.addEventListener('click', function (e) { if (e.target === m) { if (MODAL_ARKA) modalKapat(); else { MODAL_IPTAL = null; modalSil(); } } });
   document.body.appendChild(m);
 }
 function modalKapat() { var ip = MODAL_IPTAL; MODAL_IPTAL = null; modalSil(); if (ip) ip(); }
@@ -643,6 +686,8 @@ function viewCiz() {
   v.scrollTop = y;
   if (!v._bagli) { v._bagli = 1; v.addEventListener('scroll', function () { if (v.scrollTop > 30 && (S.tab === 'liste' || S.tab === 'toplu')) daralt(); }, { passive: true }); }
   if (S.tab === 'diger' && S.sub === 'davet') qrCiz();
+  if (S.tab === 'diger' && S.sub === 'bagkod') bagQrCiz();
+  if (!(S.tab === 'diger' && S.sub === 'bagkod')) bagSayacDur();
 }
 function kuyrukBanner() {
   var q = kuyruk().length; if (!q) return '';
@@ -949,20 +994,22 @@ function topluOnay(karar) {
 }
 function kullaniciListe() {
   var us = (D.kullanicilar || []).slice();
-  var sira = { BEKLIYOR: 0, ONAYLI: 1, PASIF: 2, REDDEDILDI: 3 };
+  var sira = { BEKLIYOR: 0, ONAYLI: 1, PASIF: 2, REDDEDILDI: 3, BIRLESTI: 4 };
   us.sort(function (a, b) { return (sira[a.durum] - sira[b.durum]) || String(a.ad).localeCompare(String(b.ad)); });
   if (!us.length) return '<div class="card mut">' + L('Kullanıcı yok', 'No users') + '</div>';
-  var lab = { BEKLIYOR: L('Onay bekliyor', 'Pending'), ONAYLI: L('Onaylı', 'Approved'), PASIF: L('Pasif', 'Inactive'), REDDEDILDI: L('Reddedildi', 'Rejected') };
-  var renk = { BEKLIYOR: 'var(--pendS);color:var(--pend)', ONAYLI: 'var(--okS);color:var(--ok)', PASIF: 'var(--soft);color:var(--mut)', REDDEDILDI: 'var(--badS);color:var(--bad)' };
+  var lab = { BEKLIYOR: L('Onay bekliyor', 'Pending'), ONAYLI: L('Onaylı', 'Approved'), PASIF: L('Pasif', 'Inactive'), REDDEDILDI: L('Reddedildi', 'Rejected'), BIRLESTI: L('Birleştirildi', 'Merged') };
+  var renk = { BEKLIYOR: 'var(--pendS);color:var(--pend)', ONAYLI: 'var(--okS);color:var(--ok)', PASIF: 'var(--soft);color:var(--mut)', REDDEDILDI: 'var(--badS);color:var(--bad)', BIRLESTI: 'var(--soft);color:var(--mut2)' };
   return '<div class="stack">' + us.map(function (u) {
     var bu = u.id === ben().id;
     var btn = u.durum === 'BEKLIYOR' ? '<button class="btn sm bad" onclick="kulKarar(\'' + u.id + '\',\'RED\')">' + L('Reddet', 'Reject') + '</button><button class="btn sm ok" onclick="kulKarar(\'' + u.id + '\',\'ONAY\')">' + L('Onayla', 'Approve') + '</button>'
       : u.durum === 'ONAYLI' ? (bu ? '<span class="tag">' + L('Siz', 'You') + '</span>' : u.id === D.kurucu ? '<span class="tag">' + L('Kurucu', 'Owner') + '</span>' : '<button class="btn sm soft" onclick="kulKarar(\'' + u.id + '\',\'PASIF\')">' + L('Pasif yap', 'Deactivate') + '</button>')
-        : '<button class="btn sm soft" onclick="kulKarar(\'' + u.id + '\',\'AKTIF\')">' + L('Aktif yap', 'Activate') + '</button>';
-    return '<div class="list-row"><span class="ico" style="background:' + (u.rol === 'YONETICI' ? 'var(--ink);color:#fff' : 'var(--accS);color:var(--acc)') + '">' + esc((u.ad || '?').charAt(0).toUpperCase()) + '</span>' +
+        : u.durum === 'BIRLESTI' ? '' : '<button class="btn sm soft" onclick="kulKarar(\'' + u.id + '\',\'AKTIF\')">' + L('Aktif yap', 'Activate') + '</button>';
+    if (u.durum !== 'BIRLESTI') btn += '<button class="btn sm soft" onclick="kulCihazlar(\'' + u.id + '\')">' + I.devices.replace(/22/g, '16') + (u.cihaz || 0) + '</button>';
+    if (u.durum !== 'BIRLESTI' && u.id !== D.kurucu && !bu) btn += '<button class="btn sm soft" onclick="kulBirlestir(\'' + u.id + '\')">' + L('Birleştir', 'Merge') + '</button>';
+    return '<div class="list-row" style="flex-wrap:wrap"><span class="ico" style="background:' + (u.rol === 'YONETICI' ? 'var(--ink);color:#fff' : 'var(--accS);color:var(--acc)') + '">' + esc((u.ad || '?').charAt(0).toUpperCase()) + '</span>' +
       '<div class="grow"><div class="t1">' + esc(u.ad) + (u.rol === 'YONETICI' ? ' <span class="tag">' + L('Yönetici', 'Admin') + '</span>' : '') + '</div><div class="t2">' + esc(u.firma) + ' · ' + esc(String(u.kayit || '').slice(0, 10)) + (u.son ? ' · ' + L('son: ', 'last: ') + esc(String(u.son).slice(0, 10)) : '') + '</div>' +
       '<span class="sb" style="display:inline-block;margin-top:6px;background:' + renk[u.durum] + '">' + (lab[u.durum] || u.durum) + '</span></div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + btn + '</div></div>';
+      (btn ? '<div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;padding-left:52px">' + btn + '</div>' : '') + '</div>';
   }).join('') + '</div>';
 }
 function kulKarar(id, karar) {
@@ -974,7 +1021,7 @@ function kulKarar(id, karar) {
 }
 
 /* ================= diğer ================= */
-function altSayfa(s) { S.sub = s; try { history.pushState({ p: 'sub' }, ''); SUB_DERIN++; } catch (e) {} if (s === 'rapor') { S.rp.grup = S.rp.grup || S.grup; S.rp.ada = S.rp.ada || S.ada; S.rp.dil = S.rp.dil || S.dil; S.rp.sonuc = null; } render(); }
+function altSayfa(s) { if (s === 'bagkod') BAG = null; if (s === 'cihazlar') CIHAZ = null; S.sub = s; try { history.pushState({ p: 'sub' }, ''); SUB_DERIN++; } catch (e) {} if (s === 'rapor') { S.rp.grup = S.rp.grup || S.grup; S.rp.ada = S.rp.ada || S.ada; S.rp.dil = S.rp.dil || S.dil; S.rp.sonuc = null; } render(); }
 function geriBas(baslik, sag) {
   return '<div style="display:flex;align-items:center;gap:10px;margin:0 0 12px"><button class="iconbtn" onclick="history.back()" aria-label="' + L('Geri', 'Back') + '">' + I.back + '</button><div class="h grow" style="font-size:24px">' + baslik + '</div>' + (sag || '') + '</div>';
 }
@@ -985,6 +1032,8 @@ function vDiger() {
     case 'firma': return vFirmaDuzen();
     case 'kalem': return vKalemEkle();
     case 'davet': return vDavet();
+    case 'bagkod': return vBagKod();
+    case 'cihazlar': return vCihazlar();
     case 'gps': return vGps();
     case 'hakkinda': return vHakkinda();
     case 'kullanicilar': return geriBas(L('Kullanıcılar', 'Users')) + kullaniciListe();
@@ -999,6 +1048,8 @@ function vDiger() {
     sat('firmalar', I.firm, L('Firmalar', 'Companies'), (D.firmalar || []).length + ' ' + L('firma', 'companies')) +
     (ad ? sat('kalem', I.plus, L('Yeni kalem ekle', 'Add new item'), L('Betonarme veya Finishing', 'Structural or Finishing')) : '') +
     (ad ? sat('kullanicilar', I.user, L('Kullanıcılar', 'Users'), (D.kullanicilar || []).length + ' ' + L('kayıtlı', 'registered') + (bekKul().length ? ' · ' + bekKul().length + ' ' + L('onay bekliyor', 'pending') : '')) : '') +
+    sat('bagkod', I.link, L('Başka cihazda aç', 'Open on another device'), L('Bilgisayar ya da tabletten aynı hesapla gir', 'Use the same account on a computer or tablet')) +
+    sat('cihazlar', I.devices, L('Cihazlarım', 'My devices'), L('Bağlı cihazları gör ve kaldır', 'See and remove linked devices')) +
     sat('davet', I.qr, L('Davet linki ve QR', 'Invite link and QR'), L('Yeni kullanıcı kaydı için', 'For new user registration')) +
     (gpsYetki() ? sat('gps', I.gps, L('GPS kalibrasyonu', 'GPS calibration'), ((D.gps || []).length) + ' ' + L('nokta', 'points') + ((D.gps || []).length >= 3 ? ' · ' + L('hazır', 'ready') : ' · ' + L('en az 3 gerekli', 'at least 3 needed'))) : '') +
     sat('dilDegis()', I.globe, L('Dil: Türkçe', 'Language: English'), L('English’e geç', 'Switch to Türkçe')) +
@@ -1130,6 +1181,98 @@ function qrIndir() {
 function kopyala(t) {
   var ok = function () { toast(L('Kopyalandı', 'Copied')); };
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok, function () { prompt('', t); }); else prompt('', t);
+}
+
+/* ---------- başka cihazda aç (bağlama kodu) ---------- */
+var BAG = null, BAG_T = null;
+function bagSayacDur() { if (BAG_T) { clearInterval(BAG_T); BAG_T = null; } }
+function bagKodAl() {
+  BAG = { yukleniyor: true }; viewCiz();
+  api('bagKod').then(function (r) { BAG = { kod: r.kod, bitis: Date.now() + r.sure * 1000 }; viewCiz(); }, function (e) { BAG = { hata: String(e.message || e) }; viewCiz(); });
+}
+function bagLink() { return davetLink() + '?bag=' + BAG.kod; }
+function vBagKod() {
+  if (!BAG) { BAG = { yukleniyor: true }; setTimeout(bagKodAl, 0); }
+  var h = geriBas(L('Başka cihazda aç', 'Open on another device'));
+  if (BAG.yukleniyor) return h + '<div class="card" style="display:flex;justify-content:center;padding:40px"><div class="spin"></div></div>';
+  if (BAG.hata) return h + '<div class="banner bad">' + esc(BAG.hata) + '</div><div class="foot"><button class="btn soft" style="flex:1" onclick="altSayfa(\'cihazlar\')">' + L('Cihazlarım', 'My devices') + '</button><button class="btn" style="flex:1" onclick="bagKodAl()">' + L('Tekrar dene', 'Try again') + '</button></div>';
+  var bitti = BAG.bitis <= Date.now();
+  return h + '<div class="card stack" style="align-items:center;text-align:center">' +
+    '<div class="t2" style="margin:0">' + L('Yeni cihazda uygulamayı aç › <b>Hesabım var</b> › bu kodu yaz', 'On the new device open the app › <b>I have an account</b> › enter this code') + '</div>' +
+    '<div class="h" style="font-size:44px;letter-spacing:.18em;' + (bitti ? 'color:var(--mut2);text-decoration:line-through' : '') + '">' + esc(BAG.kod.slice(0, 3) + ' ' + BAG.kod.slice(3)) + '</div>' +
+    '<div id="bagSayac" class="pill ' + (bitti ? 'off' : '') + '">' + bagKalan() + '</div>' +
+    '<div class="t2" style="margin:6px 0 0">' + L('ya da yeni cihazın kamerasıyla QR’ı okut', 'or scan the QR with the new device’s camera') + '</div>' +
+    '<div id="bagQr" style="width:220px;height:220px;background:#fff;padding:8px;border-radius:16px;' + (bitti ? 'opacity:.2' : '') + '"></div>' +
+    '<div class="note">' + L('Kod tek kullanımlıktır. Hesap başına en fazla 3 cihaz bağlanabilir.', 'The code works once. Up to 3 devices per account.') + '</div></div>' +
+    '<div class="foot"><button class="btn ' + (bitti ? 'acc' : 'soft') + ' full" onclick="bagKodAl()">' + L('Yeni kod al', 'Get a new code') + '</button></div>';
+}
+function bagKalan() {
+  var s = Math.max(0, Math.round((BAG.bitis - Date.now()) / 1000));
+  return s ? L('Kalan süre ', 'Expires in ') + Math.floor(s / 60) + ':' + pad(s % 60) : L('Süresi doldu', 'Expired');
+}
+function bagQrCiz() {
+  var el = $('bagQr'); if (!el || !BAG || !BAG.kod || !window.qrcode) return;
+  var q = qrcode(0, 'M'); q.addData(bagLink()); q.make();
+  el.innerHTML = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  var sv = el.querySelector('svg'); if (sv) { sv.style.width = '100%'; sv.style.height = '100%'; }
+  bagSayacDur();
+  BAG_T = setInterval(function () {
+    var e = $('bagSayac'); if (!e) return bagSayacDur();
+    if (BAG.bitis <= Date.now()) { bagSayacDur(); viewCiz(); return; }
+    e.textContent = bagKalan();
+  }, 1000);
+}
+
+/* ---------- cihazlarım ---------- */
+var CIHAZ = null;
+function cihazYukle(uid) {
+  CIHAZ = { yukleniyor: true, uid: uid || '' }; viewCiz();
+  (uid ? api('kullaniciCihazlar', { id: uid }) : api('cihazlar')).then(function (r) { CIHAZ = { liste: r.cihazlar, uid: uid || '' }; viewCiz(); if ($('modal') && uid) kulCihazModal(uid); }, function (e) { CIHAZ = { hata: String(e.message || e) }; viewCiz(); });
+}
+function cihazSatiri(c, uid) {
+  return '<div class="list-row" style="' + (uid ? 'box-shadow:none;background:var(--soft)' : '') + '"><span class="ico" style="background:var(--accS);color:var(--acc)">' + I.devices + '</span><div class="grow"><div class="t1">' + esc(c.ad || L('Cihaz', 'Device')) + (c.bu ? ' <span class="tag">' + L('Bu cihaz', 'This device') + '</span>' : '') + '</div>' +
+    '<div class="t2">' + L('Bağlandı ', 'Linked ') + esc(String(c.eklenme || '').slice(0, 10)) + (c.son ? ' · ' + L('son ', 'last ') + esc(String(c.son).slice(0, 10)) : '') + '</div></div>' +
+    (c.bu ? '' : '<button class="btn sm soft" onclick="cihazKaldir(\'' + c.id + '\',' + jq(c.ad || '') + ',' + jq(uid || '') + ')">' + L('Kaldır', 'Remove') + '</button>') + '</div>';
+}
+function vCihazlar() {
+  if (!CIHAZ || CIHAZ.uid) setTimeout(function () { cihazYukle(''); }, 0);
+  var h = geriBas(L('Cihazlarım', 'My devices'));
+  if (!CIHAZ || CIHAZ.yukleniyor || CIHAZ.uid) return h + '<div class="card" style="display:flex;justify-content:center;padding:40px"><div class="spin"></div></div>';
+  if (CIHAZ.hata) return h + '<div class="banner bad">' + esc(CIHAZ.hata) + '</div>';
+  return h + '<div class="banner info" style="margin-bottom:10px">' + L('Hesabına en fazla 3 cihaz bağlanabilir. Kaybolan ya da artık kullanmadığın cihazı kaldır.', 'Up to 3 devices can be linked. Remove a device that is lost or no longer used.') + '</div>' +
+    '<div class="stack">' + CIHAZ.liste.map(function (c) { return cihazSatiri(c, ''); }).join('') + '</div>' +
+    '<div class="foot">' + (CIHAZ.liste.length < 3 ? '<button class="btn acc full" onclick="BAG=null;altSayfa(\'bagkod\')">' + I.plus + L('Cihaz ekle', 'Add device') + '</button>' : '') + '</div>';
+}
+function cihazKaldir(id, ad, uid) {
+  soru(L('Cihaz kaldırılsın mı?', 'Remove device?'), '<b>' + esc(ad) + '</b> ' + L('bu hesaptan çıkarılır; o cihazda uygulama yeniden kayıt ekranına döner. Gönderilmemiş girişleri varsa kaybolur.', 'will be signed out of this account; the app on it returns to registration. Unsent entries on it will be lost.'),
+    L('Kaldır', 'Remove'), function () {
+      api('cihazKaldir', { id: id }).then(function (r) {
+        toast(L('Cihaz kaldırıldı', 'Device removed'));
+        if (uid) { CIHAZ = { liste: r.cihazlar, uid: uid }; veriAl(true, true).catch(function () {}); kulCihazModal(uid); }
+        else { CIHAZ = { liste: r.cihazlar, uid: '' }; viewCiz(); }
+      }, hata);
+    }, 'bad');
+}
+/* yönetici: bir kişinin cihazları ve birleştirme */
+function kulCihazlar(uid) { CIHAZ = null; soru(L('Cihazlar', 'Devices'), '<div style="display:flex;justify-content:center;padding:20px"><div class="spin"></div></div>', null, null); cihazYukle(uid); }
+function kulCihazModal(uid) {
+  var u = (D.kullanicilar || []).filter(function (x) { return x.id === uid; })[0] || {};
+  var ls_ = CIHAZ && CIHAZ.liste || [];
+  soru(esc(u.ad || '') + ' · ' + L('cihazlar', 'devices'), (ls_.length ? '<div class="stack">' + ls_.map(function (c) { return cihazSatiri(c, uid); }).join('') + '</div>' : '<div class="mut">' + L('Bağlı cihaz yok.', 'No linked devices.') + '</div>') +
+    (uid === D.kurucu && uid !== ben().id ? '<div class="note" style="margin-top:8px">' + L('Kurucu hesabın cihazlarını yalnızca kurucu kaldırabilir.', 'Only the owner can remove the owner’s devices.') + '</div>' : ''), null, null, null, L('Kapat', 'Close'));
+}
+function kulBirlestir(kaynak) {
+  var k = (D.kullanicilar || []).filter(function (x) { return x.id === kaynak; })[0] || {};
+  var adaylar = (D.kullanicilar || []).filter(function (x) { return x.id !== kaynak && x.durum === 'ONAYLI'; })
+    .sort(function (a, b) { var ka = a.firma === k.firma ? 0 : 1, kb = b.firma === k.firma ? 0 : 1; return (ka - kb) || String(a.ad).localeCompare(String(b.ad)); });
+  soru(L('Başka hesapla birleştir', 'Merge into another account'),
+    L('<b>' + esc(k.ad) + '</b> (' + esc(k.firma) + ') kaydının cihazları seçtiğiniz hesaba taşınır, bu kayıt kapanır. Geçmiş girişler olduğu gibi kalır.', 'Devices of <b>' + esc(k.ad) + '</b> (' + esc(k.firma) + ') move to the chosen account and this record is closed. Past entries stay as they are.') +
+    '<select class="inp" data-v="hedef" style="margin-top:10px"><option value="">' + L('Hedef hesabı seçin', 'Choose target account') + '</option>' +
+    adaylar.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.ad) + ' · ' + esc(x.firma) + ' · ' + esc(x.id) + '</option>'; }).join('') + '</select>',
+    L('Birleştir', 'Merge'), function (v) {
+      if (!v.hedef) return toast(L('Hedef hesap seçin', 'Choose a target account'));
+      api('birlestir', { kaynak: kaynak, hedef: v.hedef }).then(function (r) { D.kullanicilar = r.kullanicilar; ls(K.D, D); toast(L('Hesaplar birleştirildi', 'Accounts merged')); render(); }, hata);
+    }, 'bad');
 }
 
 /* ---------- GPS kalibrasyonu ---------- */
