@@ -25,11 +25,45 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
 #view.wide{max-width:1100px;margin:0 auto}
 
 /* ---------- üst seçim alanı ---------- */
-#hdr{position:relative;z-index:20;background:var(--card);border-radius:0 0 26px 26px;box-shadow:0 6px 24px rgba(11,18,32,.08);padding:calc(10px + var(--safeT)) 16px 12px;transition:padding .2s}
+#hdr{position:relative;z-index:20;background:linear-gradient(150deg,#0B1220 0%,#0F3446 62%,#0F6E8C 100%);color:#fff;border-radius:0 0 26px 26px;box-shadow:0 8px 26px rgba(11,18,32,.22);padding:calc(10px + var(--safeT)) 16px 12px}
+#hdr.anim{transition:height .34s cubic-bezier(.22,.8,.24,1),padding .34s cubic-bezier(.22,.8,.24,1),border-radius .34s}
+#hdr .hic.belir{animation:belir .34s ease both}
+@keyframes belir{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 #hdr .row{display:flex;align-items:center;gap:10px}
 #hdr .brand{flex:1;min-width:0;display:flex;flex-direction:column}
 #hdr .brand .h{font-size:22px;line-height:1.1}
-#hdr .brand small{font-size:12px;font-weight:600;color:var(--mut)}
+#hdr .brand .h{color:#fff}
+#hdr .brand small{font-size:12px;font-weight:600;color:#A7C4D1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hdr .ava{background:#fff;color:var(--ink)}
+/* üst alan uyarı etiketleri */
+.hp{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:13px;font-size:11.5px;font-weight:700;white-space:nowrap;flex:none;cursor:pointer}
+.hp i{width:7px;height:7px;border-radius:4px;background:currentColor}
+.hp.p{background:rgba(110,86,207,.34);color:#DAD2FF}.hp.q{background:rgba(242,185,59,.22);color:#FFD27A}.hp.off{background:rgba(217,45,32,.3);color:#FFC2BB;cursor:default}
+/* özet kartı ve durum çubuğu */
+.ozk{margin-top:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:18px;padding:10px 12px}
+.ozk .r{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ozk .r b{font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:15px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ozk .yz{font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:26px;line-height:1}
+.ozk em{font-style:normal;font-size:11.5px;font-weight:600;color:#A7C4D1}
+.dbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.14);margin:8px 0 7px}
+.dbar i{display:block;height:100%;transition:width .45s ease}
+.dbar .ok{background:#2BB673}.dbar .wip{background:#F2B93B}.dbar .non{background:#8A9AAE}
+.dleg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;font-weight:600;color:#C9DBE3;align-items:center}
+.dleg span{display:inline-flex;align-items:center;gap:5px}.dleg span i{width:9px;height:9px;border-radius:3px}
+/* koyu zemin üzerindeki seçimler */
+#hdr .seg{background:rgba(255,255,255,.08)}
+#hdr .seg button{color:#C9DBE3;height:52px;line-height:1.15;transition:background .25s,color .25s}
+#hdr .seg button small{display:block;font-size:10.5px;font-weight:600;opacity:.8;margin-top:2px}
+#hdr .seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.25)}
+#hdr .seg.acc button.on{background:var(--acc);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35),0 2px 10px rgba(0,0,0,.25)}
+#hdr .search{background:rgba(255,255,255,.1);color:#A7C4D1}
+#hdr .search input{color:#fff}
+#hdr .search input::placeholder{color:#8FB0BF}
+#hdr .chip{background:rgba(255,255,255,.1);color:#DCE8EE;display:inline-flex;align-items:center;gap:6px;transition:background .25s,color .25s}
+#hdr .chip.on{background:#fff;color:var(--ink);font-weight:700}
+#hdr .chip .d{width:8px;height:8px;border-radius:4px;flex:none}
+#hdr .chip em{font-style:normal;opacity:.7;font-weight:700}
+#hdr .grab{display:block;border:0;padding:0;background:rgba(255,255,255,.32)}
 .pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:700;background:var(--soft);color:var(--ink2);border:0;white-space:nowrap}
 .pill.warn{background:var(--wipS);color:var(--wipT)}.pill.off{background:var(--badS);color:var(--bad)}.pill.pend{background:var(--pendS);color:var(--pend)}
 .ava{width:40px;height:40px;border-radius:13px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:Manrope,sans-serif;border:0;flex:none}
@@ -46,7 +80,20 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
 .chip{flex:none;height:36px;padding:0 14px;border-radius:18px;border:0;background:var(--soft);color:var(--ink2);font-weight:600;font-size:13px;white-space:nowrap}
 .chip.on{background:var(--ink);color:#fff;font-weight:700}
 .chip.acc.on{background:var(--acc)}
-#hdr.thin{padding:calc(6px + var(--safeT)) 12px 6px;border-radius:0 0 18px 18px}
+#hdr.thin{padding:calc(8px + var(--safeT)) 12px 9px;border-radius:0 0 20px 20px}
+#hdr.thin .thinbar{display:block;height:auto;padding:0;cursor:pointer;color:#fff}
+.tr{display:flex;align-items:center;gap:9px}
+.adar{width:34px;height:34px;border-radius:11px;background:#fff;color:var(--ink);font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex:none}
+.ttx{flex:1;min-width:0}
+.ttx b{display:block;font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ttx small{display:block;font-size:11.5px;font-weight:600;color:#A7C4D1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tyz{font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:19px;flex:none}
+#hdr .chev{background:rgba(255,255,255,.14);color:#fff}
+#hdr.thin .dbar{height:5px;margin:7px 0 0}
+.tmeta{margin-top:5px;font-size:11px;gap:10px;flex-wrap:nowrap}
+.tmeta span i{width:7px;height:7px}
+.tmeta .sp{flex:1}
+.tmeta .hp{height:22px;font-size:11px;padding:0 8px}
 .thinbar{display:flex;align-items:center;gap:8px;height:36px;width:100%;border:0;background:transparent;padding:0 4px;font-weight:700;font-size:14px;text-align:left}
 .thinbar .sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thinbar .sum b{font-family:Manrope,sans-serif;font-weight:800}
@@ -194,12 +241,12 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
 .mnums b{color:var(--ink)}
 
 /* ---------- modal / toast ---------- */
-#modal{position:fixed;inset:0;z-index:90;background:rgba(11,18,32,.45);display:flex;align-items:flex-end;justify-content:center}
-#modal .box{background:#fff;width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:20px 18px calc(18px + var(--safeB));display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow:auto}
-#modal .box .h{font-size:20px}
-#modal .acts{display:flex;gap:8px}
-#modal .acts .btn{flex:1}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navH) + 34px + var(--safeB));z-index:95;background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-weight:600;font-size:14px;box-shadow:var(--shL);max-width:calc(100% - 32px);transition:opacity .25s;pointer-events:none}
+#modal,.modal{position:fixed;inset:0;z-index:90;background:rgba(11,18,32,.45);display:flex;align-items:flex-end;justify-content:center}
+#modal .box,.modal .box{background:#fff;width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:20px 18px calc(18px + var(--safeB));display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow:auto}
+#modal .box .h,.modal .box .h{font-size:20px}
+#modal .acts,.modal .acts{display:flex;gap:8px}
+#modal .acts .btn,.modal .acts .btn{flex:1}
+#toast{position:fixed;left:50%;transform:translateX(-50%);transition:opacity .25s,transform .25s;bottom:calc(var(--navH) + 34px + var(--safeB));z-index:95;background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-weight:600;font-size:14px;box-shadow:var(--shL);max-width:calc(100% - 32px);transition:opacity .25s;pointer-events:none}
 .banner{background:var(--wipS);color:var(--wipT);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center}
 .banner.bad{background:var(--badS);color:var(--bad)}
 .banner.info{background:var(--accS);color:var(--acc)}
@@ -220,8 +267,8 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
 @media (min-width:700px){
   #panel{left:auto;width:480px;box-shadow:-10px 0 40px rgba(11,18,32,.18);border-radius:26px 0 0 26px;overflow:hidden}
   #panel .ph{border-radius:0 0 22px 22px}
-  #modal{align-items:center}
-  #modal .box{border-radius:26px}
+  #modal,.modal{align-items:center}
+  #modal .box,.modal .box{border-radius:26px}
   .vgrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
 }
 @media (min-width:1000px){
@@ -243,3 +290,37 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
 
 .foot .btn:disabled{opacity:1;background:#D0D5DD;color:#fff}
 #panel .pf .btn:disabled{opacity:1;background:#D0D5DD}
+
+/* ---------- yumuşak hareketler ---------- */
+.modal{animation:mFade .2s ease both}
+.modal .box{animation:mRise .28s cubic-bezier(.22,.8,.24,1) both}
+.modal.cikis{animation:mFadeOut .18s ease both}
+.modal.cikis .box{animation:mDrop .18s ease both}
+@keyframes mFade{from{opacity:0}to{opacity:1}}
+@keyframes mFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes mRise{from{transform:translateY(28px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes mDrop{from{transform:none}to{transform:translateY(18px)}}
+#panel.giris{animation:pAlt .3s cubic-bezier(.22,.8,.24,1) both}
+#panel.cikis{animation:pAltCik .24s ease both}
+@keyframes pAlt{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pAltCik{from{transform:none;opacity:1}to{transform:translateY(48px);opacity:0}}
+#view.gecis>.icerik{animation:belir .24s ease both}
+#mapWrap.gecis{animation:mFade .3s ease both}
+#eylem.giris .foot{animation:yuksel .28s cubic-bezier(.22,.8,.24,1) both}
+@keyframes yuksel{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
+.kc{transition:box-shadow .25s}
+@media (min-width:700px){
+  #panel.giris{animation-name:pSag}
+  #panel.cikis{animation-name:pSagCik}
+  @keyframes pSag{from{transform:translateX(56px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes pSagCik{from{transform:none;opacity:1}to{transform:translateX(56px);opacity:0}}
+}
+@media (min-width:1000px){
+  #panel.giris{animation:pGen .32s cubic-bezier(.22,.8,.24,1) both}
+  #panel.cikis{animation:pGenCik .24s ease both}
+  @keyframes pGen{from{width:0;opacity:0}to{width:460px;opacity:1}}
+  @keyframes pGenCik{from{width:460px;opacity:1}to{width:0;opacity:0}}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
