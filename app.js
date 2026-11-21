@@ -358,7 +358,7 @@ function cihazCik(sor) {
 
 /* ================= modal ================= */
 var MODAL_CB = null, MODAL_IPTAL = null;
-function modalSil() { var m = $('modal'); if (!m) return; m.removeAttribute('id'); m.classList.add('cikis'); m.style.pointerEvents = 'none'; setTimeout(function () { m.remove(); }, azHareket() ? 0 : 180); }
+function modalSil() { var m = $('modal'); if (!m) return; m.removeAttribute('id'); m.classList.add('cikis'); m.style.pointerEvents = 'none'; setTimeout(function () { m.remove(); }, animSure(170)); }
 var MODAL_ARKA = true;
 function soru(baslik, govde, evet, cb, tur, hayir, iptal, arkaKapatmaz) {
   modalSil(); MODAL_CB = cb; MODAL_IPTAL = iptal || null; MODAL_ARKA = !arkaKapatmaz;
@@ -386,7 +386,8 @@ function render() {
   if (!SHELL) {
     app.innerHTML = '<div id="shell"><nav id="rail" aria-label="menu"></nav><div id="col"><header id="hdr"></header><div id="stage"><div id="mapWrap"><div id="map"></div><div id="mapUi"></div></div><div id="view" class="hide"></div><div id="eylem" class="hide"></div></div><nav id="nav" aria-label="menu"></nav></div><aside id="panel" class="hide"></aside></div>';
     SHELL = true; mapKur();
-    try { new ResizeObserver(function () { if (MAP) MAP.resize(); }).observe($('stage')); } catch (e) {}
+    var rzT = 0;
+    try { new ResizeObserver(function () { if (rzT) return; rzT = requestAnimationFrame(function () { rzT = 0; if (MAP) MAP.resize(); }); }).observe($('stage')); } catch (e) {}
   }
   hdrCiz(); navCiz(); viewCiz(); panelCiz();
   if (MAP_HAZIR) { mapUiCiz(); etiketBoya(); }
@@ -398,7 +399,7 @@ function sekme(t) {
   if (S.sub && SUB_DERIN > 0) { var d = SUB_DERIN; SUB_DERIN = 0; S.subGeri = 1; try { history.go(-d); } catch (e) { S.subGeri = 0; } }
   S.sub = null;
   render();
-  if (t === 'harita') { var mw = $('mapWrap'); if (mw) { mw.classList.remove('gecis'); void mw.offsetWidth; mw.classList.add('gecis'); } if (MAP) setTimeout(function () { MAP.resize(); }, 30); }
+  if (t === 'harita' && MAP) setTimeout(function () { MAP.resize(); }, 30);
 }
 function navCiz() {
   var n = onaySayi();
@@ -413,7 +414,13 @@ function navCiz() {
 
 /* ---------- üst seçim alanı (büyük → ince) ---------- */
 function hdrVar() { return S.tab === 'harita' || S.tab === 'liste' || S.tab === 'toplu' || (S.tab === 'onay' && false); }
-function azHareket() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+/* ---------- animasyon seviyesi: tam / sade / kapalı (otomatik: telefon gücüne göre) ---------- */
+function azHareketOS() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+function zayifCihaz() { var m = navigator.deviceMemory, c = navigator.hardwareConcurrency; return (m && m <= 3) || (c && c <= 4); }
+function animSeviye() { var a = ls('mxm_anim') || 'oto'; if (a === 'oto') return (azHareketOS() || zayifCihaz()) ? 'sade' : 'tam'; return a; }
+function animSure(ms) { var s = animSeviye(); return s === 'kapali' ? 0 : s === 'sade' ? 120 : ms; }
+function azHareket() { return animSeviye() !== 'tam'; }
+function animUygula() { var s = animSeviye(), r = document.documentElement; r.classList.toggle('anim-sade', s === 'sade'); r.classList.toggle('anim-yok', s === 'kapali'); }
 /* Bir villa kümesinin seçili modül (ya da tek kalem) durumuna göre özeti: biten villa oranı */
 function durumOzet(bs, g, mod) {
   var o = { ok: 0, wip: 0, non: 0, n: 0, top: bs.length };
@@ -425,32 +432,42 @@ function durumBar(o) {
   var w = function (x) { return o.n ? (x / o.n * 100).toFixed(1) : 0; };
   return '<div class="dbar"><i class="ok" style="width:' + w(o.ok) + '%"></i><i class="wip" style="width:' + w(o.wip) + '%"></i><i class="non" style="width:' + w(o.non) + '%"></i></div>';
 }
+function ozRenk(o) { return o.n && o.ok === o.n ? '#2BB673' : (o.ok || o.wip ? '#F2B93B' : '#8A9AAE'); }
 function senkSaat() { var s = S.sonSenk || ''; return s ? (s.slice(0, 10) === bugun() ? s.slice(11, 16) : s.slice(0, 5) + ' ' + s.slice(11, 16)) : ''; }
 /* üst alandaki uyarı etiketleri: onay bekleyen, gönderilecek, çevrimdışı */
-function hdrUyari(kisa) {
+function hdrUyari() {
   var h = '', n = onaySayi(), q = kuyruk().length;
-  if (n) h += '<span class="hp p" role="button" onclick="event.stopPropagation();sekme(\'onay\')"><i></i>' + n + (kisa ? '' : ' ') + (admin() ? L(' onay', ' to approve') : L(' onayda', ' pending')) + '</span>';
+  if (n) h += '<span class="hp p" role="button" onclick="event.stopPropagation();sekme(\'onay\')"><i></i>' + n + (admin() ? L(' onay', ' to approve') : L(' onayda', ' pending')) + '</span>';
   if (!S.online) h += '<span class="hp off"><i></i>' + L('Çevrimdışı', 'Offline') + (q ? ' · ' + q : '') + '</span>';
   else if (q) h += '<span class="hp q" role="button" onclick="event.stopPropagation();gonder()">↑ ' + q + ' ' + L('gönderilecek', 'to send') + '</span>';
   return h;
 }
-function senkPill() { return hdrUyari(false); }
+function senkPill() { return hdrUyari(); }
+/* Üst alan haritanın üstünde yüzer; yüksekliği --hdrH olarak içeriğe verilir (harita yeniden boyutlanmaz) */
+function hdrYukseklik(h1) {
+  var col = $('col'); if (!col || col._hh === h1) return;
+  var v = $('view'), d = (col._hh || 0) - h1;
+  col._hh = h1; col.style.setProperty('--hdrH', h1 + 'px');
+  if (v && !v.classList.contains('hide') && d) v.scrollTop = Math.max(0, v.scrollTop - d); // içerik yerinde kalsın
+}
+function hdrPad(ek) { var hh = ($('col') && $('col')._hh) || 0; return { top: hh + (ek || 30), bottom: 140, left: 30, right: 30 }; }
 function hdrCiz() {
   var h = $('hdr');
-  if (!hdrVar()) { h.className = 'hide'; h._mod = ''; return; }
+  if (!hdrVar()) { h.className = 'hide'; h._mod = ''; hdrYukseklik(0); return; }
   var yeni = S.big ? 'big' : 'thin';
   if (h._mod === yeni && document.activeElement && document.activeElement.id === 'ara') { hdrOzetTazele(); return; } // yazarken arama kutusunu bozma
-  var h0 = (h._mod && h._mod !== yeni && !azHareket()) ? h.getBoundingClientRect().height : 0;
-  var ic = hdrIcerik();
+  var animli = h._mod && h._mod !== yeni && animSeviye() === 'tam';
+  var h0 = h._mod ? h.offsetHeight : 0;
   h.className = yeni; h._mod = yeni;
-  h.innerHTML = '<div class="hic">' + ic + '</div>';
-  if (h0) {
-    var h1 = h.getBoundingClientRect().height;
-    h.style.height = h0 + 'px'; h.style.overflow = 'hidden'; void h.offsetHeight;
+  h.innerHTML = '<div class="hic">' + hdrIcerik() + '</div>';
+  var h1 = h.offsetHeight;
+  hdrYukseklik(h1);
+  if (animli && h0 && h0 !== h1) {
+    h.style.height = h0 + 'px'; void h.offsetHeight;
     h.classList.add('anim'); h.style.height = h1 + 'px';
     h.firstChild.classList.add('belir');
     clearTimeout(h._t);
-    h._t = setTimeout(function () { h.style.height = ''; h.style.overflow = ''; h.classList.remove('anim'); if (MAP) MAP.resize(); }, 360);
+    h._t = setTimeout(function () { h.style.height = ''; h.classList.remove('anim'); }, 260);
   }
 }
 function hdrIcerik() {
@@ -462,54 +479,51 @@ function hdrIcerik() {
   var tum = adaBinalar(S.ada);
   var fb = harita ? tum.filter(function (b) { return !q || b.id.toLowerCase().indexOf(q) === 0 || String(b.tip).toLowerCase().indexOf(q) === 0; }) : filtre(tum);
   var o = durumOzet(fb, S.grup, mod);
-  var filtreYazi = fb.length + ' ' + L('villa', 'villas') + (!harita && S.cins !== 'all' ? ' · ' + cAd(S.cins) : '') + (S.ara ? ' · “' + esc(S.ara) + '”' : '') +
-    (fb.length === tum.length && !S.ara ? ' · ' + L('filtre yok', 'no filter') : '');
-  var leg = function (kisa) {
-    return '<span><i style="background:#2BB673"></i>' + (kisa ? '' : L('Bitti ', 'Done ')) + o.ok + '</span><span><i style="background:#F2B93B"></i>' + (kisa ? '' : L('Başladı ', 'Started ')) + o.wip + '</span><span><i style="background:#8A9AAE"></i>' + (kisa ? '' : L('Başlamadı ', 'Not started ')) + o.non + '</span>';
-  };
-  var ic;
+  var filtreYazi = fb.length + ' ' + L('villa', 'villas') + (!harita && S.cins !== 'all' ? ' · ' + cAd(S.cins) : '') + (S.ara ? ' · “' + esc(S.ara) + '”' : '');
+  var leg = '<span><i style="background:#2BB673"></i>' + o.ok + '</span><span><i style="background:#F2B93B"></i>' + o.wip + '</span><span><i style="background:#8A9AAE"></i>' + o.non + '</span>';
   if (!S.big) {
-    ic = '<div class="thinbar" role="button" tabindex="0" onclick="S.big=true;hdrCiz()" onkeydown="if(event.key===\'Enter\'){S.big=true;hdrCiz()}" aria-label="' + L('Seçimleri aç', 'Open selections') + '">' +
-      '<div class="tr"><span class="adar">' + S.ada + '</span><span class="ttx"><b>' + esc(gAd(S.grup)) + ' · ' + esc(gorunum) + '</b><small>' + filtreYazi + '</small></span>' +
+    return '<div class="thinbar" role="button" tabindex="0" onclick="S.big=true;hdrCiz()" onkeydown="if(event.key===\'Enter\'){S.big=true;hdrCiz()}" aria-label="' + L('Seçimleri aç', 'Open selections') + '">' +
+      '<div class="tr"><span class="adar">' + S.ada + '</span><span class="ttx"><b>' + esc(gAd(S.grup)) + ' · ' + esc(gorunum) + '</b><small>' + filtreYazi + (fb.length === tum.length && !S.ara ? ' · ' + L('filtre yok', 'no filter') : '') + '</small></span>' +
       '<span class="tyz">%' + o.p + '</span><span class="chev">' + I.down + '</span></div>' + durumBar(o) +
-      '<div class="tmeta dleg">' + leg(true) + '<span class="sp"></span>' + hdrUyari(true) + '</div></div>';
-  } else {
-    var u = ben();
-    var cinsler = ['all'].concat(uniq(tum.map(function (b) { return b.cins; })));
-    var chip;
-    if (harita) {
-      chip = '<button class="chip ' + (S.mod === 'genel' ? 'on' : '') + '" onclick="modSec(\'genel\')">' + L('Modül geneli', 'Module overall') + '</button>' +
-        kalemlerOf(S.grup).map(function (k) {
-          var ko = durumOzet(tum, S.grup, k.id), renk = ko.n && ko.ok === ko.n ? '#2BB673' : (ko.ok || ko.wip ? '#F2B93B' : '#8A9AAE');
-          return '<button class="chip ' + (S.mod === k.id ? 'on' : '') + '" onclick="modSec(\'' + k.id + '\')"><i class="d" style="background:' + renk + '"></i>' + esc(kAd(k)) + ' <em>%' + ko.p + '</em></button>';
-        }).join('');
-    } else {
-      chip = cinsler.map(function (c) {
-        var n = c === 'all' ? tum.length : tum.filter(function (b) { return b.cins === c; }).length;
-        return '<button class="chip ' + (S.cins === c ? 'on' : '') + '" onclick="S.cins=' + jq(c) + ';render()">' + (c === 'all' ? L('Tümü', 'All') : esc(cAd(c))) + ' <em>' + n + '</em></button>';
-      }).join('');
-    }
-    var adaBtn = ['A', 'C'].map(function (a) {
-      var bs = adaBinalar(a), ao = durumOzet(bs, S.grup, 'genel');
-      return '<button class="' + (S.ada === a ? 'on' : '') + '" onclick="adaSec(\'' + a + '\')">' + L(a + ' Adası', 'Island ' + a) + '<small>' + bs.length + ' ' + L('villa', 'villas') + ' · %' + ao.p + '</small></button>';
-    }).join('');
-    var grpBtn = gruplar().map(function (g) {
-      var go = durumOzet(tum, g, 'genel');
-      return '<button class="' + (S.grup === g ? 'on' : '') + '" onclick="grupSec(' + jq(g) + ')">' + esc(gAd(g)) + '<small>' + kalemlerOf(g).length + ' ' + L('kalem', 'items') + ' · %' + go.p + '</small></button>';
-    }).join('');
-    ic = '<div class="row"><div class="brand"><span class="h">MXM SiteTrack</span><small>' + esc(u.ad || '') + ' · ' + esc(fkisa(u.firma || '')) + (senkSaat() ? ' · ' + (window.innerWidth < 500 ? '⟳ ' : L('son senkron ', 'synced ')) + senkSaat() : '') + '</small></div>' + hdrUyari(false) +
-      '<button class="ava" onclick="sekme(\'diger\')" aria-label="' + L('Menü', 'Menu') + '">' + esc(((u.ad || '?').trim().charAt(0) || '?').toUpperCase()) + '</button></div>' +
-      '<div class="ozk"><div class="r"><b>' + L(S.ada + ' Adası', 'Island ' + S.ada) + ' · ' + esc(gAd(S.grup)) + (mod !== 'genel' ? ' · ' + esc(modAd) : '') + '</b><span class="yz">%' + o.p + '</span></div>' +
-      '<div class="r"><em>' + filtreYazi + ' · ' + L('biten villa oranı', 'share of finished villas') + '</em></div>' + durumBar(o) + '<div class="dleg">' + leg(false) + '</div></div>' +
-      '<div class="grid2"><div class="seg">' + adaBtn + '</div><div class="seg acc">' + grpBtn + '</div></div>' +
-      '<label class="search">' + I.search + '<input id="ara" type="search" inputmode="search" placeholder="' + L('Villa no veya tip ara', 'Search villa no or type') + '" value="' + esc(S.ara) + '" oninput="araYaz(this.value)" onkeydown="if(event.key===\'Enter\'){araGit();this.blur()}"></label>' +
-      '<div class="chips">' + chip + '</div>' +
-      '<button class="grab" onclick="daralt()" aria-label="' + L('Daralt', 'Collapse') + '"></button>';
+      '<div class="tmeta dleg">' + leg + '<span class="sp"></span>' + hdrUyari() + '</div></div>';
   }
-  return ic;
+  var u = ben();
+  var adaBtn = ['A', 'C'].map(function (a) { return '<button class="' + (S.ada === a ? 'on' : '') + '" onclick="adaSec(\'' + a + '\')" aria-label="' + L(a + ' Adası', 'Island ' + a) + '">' + a + '</button>'; }).join('');
+  var grpBtn = gruplar().map(function (g) { return '<button class="' + (S.grup === g ? 'on' : '') + '" onclick="grupSec(' + jq(g) + ')">' + esc(gAd(g)) + '</button>'; }).join('');
+  return '<div class="r1"><div class="seg sada">' + adaBtn + '</div><div class="seg acc sgrp">' + grpBtn + '</div>' +
+    '<button class="ava" onclick="sekme(\'diger\')" aria-label="' + L('Menü', 'Menu') + '">' + esc(((u.ad || '?').trim().charAt(0) || '?').toUpperCase()) + '</button></div>' +
+    '<div class="ozs"><span class="yz" title="' + L('biten villa oranı', 'share of finished villas') + '">%' + o.p + '</span><div class="m">' + durumBar(o) +
+    '<div class="dleg">' + leg + '<span class="ek">· ' + filtreYazi + (senkSaat() ? ' · ⟳ ' + senkSaat() : '') + '</span></div></div>' + hdrUyari() + '</div>' +
+    '<label class="search">' + I.search + '<input id="ara" type="search" inputmode="search" placeholder="' + L('Villa no veya tip ara', 'Search villa no or type') + '" value="' + esc(S.ara) + '" oninput="araYaz(this.value)" onkeydown="if(event.key===\'Enter\'){araGit();this.blur()}"></label>' +
+    (harita ? ddHtml(tum) : '') +
+    '<button class="grab" onclick="daralt()" aria-label="' + L('Daralt', 'Collapse') + '"></button>';
+}
+/* "Modül geneli ▾" açılır listesi */
+function ddHtml(tum) {
+  var ogeler = [{ id: 'genel', ad: L('Modül geneli', 'Module overall'), o: durumOzet(tum, S.grup, 'genel') }].concat(kalemlerOf(S.grup).map(function (k) { return { id: k.id, ad: kAd(k), o: durumOzet(tum, S.grup, k.id) }; }));
+  var sec = ogeler.filter(function (x) { return x.id === S.mod; })[0] || ogeler[0];
+  var h = '<div class="dd' + (S.dd ? ' acik' : '') + '"><button class="ddb" onclick="ddAc()" aria-expanded="' + (!!S.dd) + '"><i class="d" style="background:' + ozRenk(sec.o) + '"></i><span class="ad">' + esc(sec.ad) + '</span><em>%' + sec.o.p + '</em><span class="ok">' + I.down + '</span></button>';
+  if (S.dd) h += '<div class="ddl" role="listbox">' + ogeler.map(function (x) {
+    return '<button role="option" class="' + (x.id === sec.id ? 'on' : '') + '" onclick="ddSec(\'' + x.id + '\')"><i class="d" style="background:' + ozRenk(x.o) + '"></i><span class="ad">' + esc(x.ad) + '</span><em>%' + x.o.p + '</em>' + (x.id === sec.id ? I.ok : '') + '</button>';
+  }).join('') + '</div>';
+  return h + '</div>';
+}
+function ddAc() { S.dd = !S.dd; hdrCiz(); }
+function ddSec(m) { S.dd = false; modSec(m); }
+/* Villa tipi filtresi: liste ve toplu girişin içinde, göze batmayan küçük bağlantı */
+function cinsLink() {
+  var tum = adaBinalar(S.ada), n = S.cins === 'all' ? tum.length : tum.filter(function (b) { return b.cins === S.cins; }).length;
+  return '<button class="cinsl" onclick="cinsMenu()">' + L('Villa tipi: ', 'Villa type: ') + '<b>' + (S.cins === 'all' ? L('Tümü', 'All') : esc(cAd(S.cins))) + '</b> (' + n + ') ▾</button>';
+}
+function cinsMenu() {
+  var tum = adaBinalar(S.ada), cs = ['all'].concat(uniq(tum.map(function (b) { return b.cins; })));
+  soru(L('Villa tipi', 'Villa type'), '<div class="stack">' + cs.map(function (c) {
+    var n = c === 'all' ? tum.length : tum.filter(function (b) { return b.cins === c; }).length;
+    return '<button class="list-row" style="box-shadow:' + (S.cins === c ? '0 0 0 2px var(--acc)' : 'none') + ';background:var(--soft)" onclick="modalKapat();S.cins=' + jq(c) + ';S.tp.sec={};render()"><span class="grow t1">' + (c === 'all' ? L('Tümü', 'All') : esc(cAd(c))) + '</span><span class="t2" style="margin:0">' + n + '</span>' + (S.cins === c ? I.ok : '') + '</button>';
+  }).join('') + '</div>', null, null, null, L('Kapat', 'Close'));
 }
 function uniq(a) { var o = []; a.forEach(function (x) { if (o.indexOf(x) < 0) o.push(x); }); return o; }
-function daralt() { if (!S.big) return; S.big = false; hdrCiz(); }
+function daralt() { if (!S.big) return; S.big = false; S.dd = false; hdrCiz(); }
 function secimKontrol() { if (S.secA && S.secG) { S.secA = S.secG = false; setTimeout(daralt, 350); } }
 function adaSec(a) {
   var deg = S.ada !== a; S.ada = a; ls(K.ada, a); S.secA = true; S.cins = 'all'; S.tp.sec = {};
@@ -523,9 +537,9 @@ function modSec(m) { S.mod = m; ls(K.mod, m); hdrCiz(); etiketBoya(); mapUiCiz()
 var araT = null, araT2 = null;
 /* arama yazılırken yalnız özet bölümlerini günceller; arama kutusuna dokunulmaz (klavye kapanmaz) */
 function hdrOzetTazele() {
-  var h = $('hdr'); if (!h || !S.big || !h.querySelector('.ozk')) return;
+  var h = $('hdr'); if (!h || !S.big || !h.querySelector('.ozs')) return;
   var t = document.createElement('div'); t.innerHTML = hdrIcerik();
-  ['.ozk', '.grid2', '.chips'].forEach(function (sel) { var e = h.querySelector(sel), y = t.querySelector(sel); if (e && y) e.replaceWith(y); });
+  ['.ozs', '.dd'].forEach(function (sel) { var e = h.querySelector(sel), y = t.querySelector(sel); if (e && y) e.replaceWith(y); });
 }
 function araYaz(v) {
   S.ara = v; clearTimeout(araT);
@@ -556,11 +570,10 @@ function mapKur() {
     var map = new maplibregl.Map({
       container: 'map', attributionControl: false, maxZoom: 21.5, minZoom: 13, dragRotate: false, pitchWithRotate: false,
       style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#6C93B6' } }] },
-      bounds: adaSinir(S.ada), fitBoundsOptions: { padding: 30 }
+      bounds: adaSinir(S.ada), fitBoundsOptions: { padding: hdrPad(20) }
     });
     MAP = map; window.map = map;
     map.touchZoomRotate.disableRotation();
-    map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'top-left');
     var W = function (a, b) { return ['interpolate', ['exponential', 2], ['zoom'], 14, a, 21, b]; };
     map.on('load', function () {
       map.addSource('ocean', { type: 'image', url: 'ocean.jpg', coordinates: meta.ocean });
@@ -585,29 +598,20 @@ function mapKur() {
       F('vbld', 'vbld', { 'fill-color': ['case', ['==', ['get', 'v'], 1], roof, '#ECE8E1'], 'fill-outline-color': koyu(roof, .5) });
       F('vroof', 'vroof', { 'line-color': ['case', ['==', ['get', 'v'], 1], koyu(roof, .55), '#9A958C'], 'line-width': W(.15, 1) }, 'line');
       F('vpool', 'vpool', { 'fill-color': '#7FD0DA', 'fill-outline-color': '#1D6B78' });
-      var ORG = { top: '50% 0%', bottom: '50% 100%', left: '0% 50%', right: '100% 50%' };
-      meta.villas.forEach(function (v) {
-        var e = document.createElement('div'); e.className = 'vl';
-        e.innerHTML = '<div class="in" style="--o:' + ORG[v.a] + '"><b>' + esc(v.no) + '</b><i>' + esc(v.t) + '</i></div>';
-        e.addEventListener('click', function (ev) {
-          ev.stopPropagation();
-          if (map.getZoom() < 17.6) { map.flyTo({ center: v.p, zoom: 18.4, duration: 600 }); daralt(); return; }
-          villaAc(v.no);
-        });
-        new maplibregl.Marker({ element: e, anchor: v.a }).setLngLat(v.p).addTo(map);
-        MK[v.no] = { el: e, v: v };
-      });
+      meta.villas.forEach(function (v) { MK[v.no] = { v: v }; });
+      etiketKatman(map);
       (meta.names || []).forEach(function (n) {
         var e = document.createElement('div'); e.style.pointerEvents = 'none';
         var sp = document.createElement('div'); sp.className = 'nm ' + (n.g ? 'g' : 's'); sp.textContent = n.n; e.appendChild(sp);
         new maplibregl.Marker({ element: e }).setLngLat(n.p).addTo(map);
       });
-      var upd = function () { var z = map.getZoom(), r = document.documentElement.style, k = window.innerWidth >= 1000 ? 1.7 : 1;
-        r.setProperty('--s', Math.min(2.2, Math.max(0.42 * k, k * Math.pow(2, (z - 18.6) * 0.7))));
-        var mw = $('map'); if (mw) mw.classList.toggle('uzak', z < 17.6); r.setProperty('--n', Math.min(1.5, Math.max(1, Math.pow(2, (z - 15) / 4)))); };
+      var mw = $('map'), sonN = 0;
+      var upd = function () { var n = Math.min(1.5, Math.max(1, Math.pow(2, (map.getZoom() - 15) / 4))); n = Math.round(n * 20) / 20; if (n !== sonN) { sonN = n; mw.style.setProperty('--n', n); } };
       map.on('zoom', upd); upd();
       map.on('dragstart', function () { if (S.tab === 'harita') daralt(); });
       MAP_HAZIR = true; etiketBoya(); mapUiCiz();
+      /* yazı tipi geç yüklenirse etiketleri doğru yazı tipiyle yeniden çiz */
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { ETK.img = {}; etiketBoya(true); });
     });
   }).catch(function () { $('mapUi').innerHTML = '<div class="near">' + L('Harita dosyası yüklenemedi', 'Map file could not load') + '</div>'; });
 }
@@ -619,22 +623,77 @@ function adaSinir(a) {
   pts.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
   return [[x0, y0], [x1, y1]];
 }
-function adaUcus() { if (MAP && S.tab === 'harita') MAP.fitBounds(adaSinir(S.ada), { padding: { top: 40, bottom: 140, left: 30, right: 30 }, duration: 700 }); }
-function etiketBoya() {
-  if (!MAP_HAZIR || !D) return;
-  var q = S.ara.trim().toLowerCase();
-  Object.keys(MK).forEach(function (no) {
-    var m = MK[no], b = bina(no), inn = m.el.firstChild;
-    var st = b ? villaDurum(no, S.grup, S.mod) : 'yok';
-    var c = RENK[st];
-    inn.style.setProperty('--c', c); inn.style.setProperty('--b', koyu(c, st === 'yok' ? .2 : .4)); inn.style.setProperty('--t', st === 'ok' ? '#F0FFF5' : koyu(c, .62));
-    inn.style.setProperty('--tx', st === 'ok' ? '#FFFFFF' : (st === 'yok' ? '#98A2B3' : '#1D2939'));
-    var p = b && (S.mod === 'genel' ? villaBekliyor(no, S.grup) : !!bek(no, S.mod));
-    var pd = inn.querySelector('.p');
-    if (p && !pd) { pd = document.createElement('span'); pd.className = 'p'; inn.appendChild(pd); } else if (!p && pd) pd.remove();
-    var dim = q && !(no.toLowerCase().indexOf(q) === 0 || (m.v.t || '').toLowerCase().indexOf(q) === 0);
-    m.el.classList.toggle('dim', !!dim);
+function adaUcus() { if (MAP && S.tab === 'harita') MAP.fitBounds(adaSinir(S.ada), { padding: hdrPad(30), duration: animSure(700) }); }
+/* ---------- villa etiketleri: haritanın kendi çizim katmanında (GPU), küçük resimler olarak ---------- */
+var ETK = { img: {}, imza: '' };
+function yuvarlakYol(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+function etiketResmi(no, tip, st, pend, kisa) {
+  var id = 'e|' + no + '|' + st + '|' + (pend ? 1 : 0) + '|' + (kisa ? 1 : 0);
+  if (ETK.img[id] && MAP.hasImage(id)) return id;
+  var R = 2, c = RENK[st] || RENK.yok;
+  var tx = st === 'ok' ? '#FFFFFF' : (st === 'yok' ? '#98A2B3' : '#1D2939'), tc = st === 'ok' ? '#F0FFF5' : koyu(c, .62);
+  var f1 = '800 ' + (11.5 * R) + 'px Inter, system-ui, sans-serif', f2 = '600 ' + (8.5 * R) + 'px Inter, system-ui, sans-serif';
+  var cv = document.createElement('canvas'), x = cv.getContext('2d');
+  x.font = f1; var w1 = x.measureText(no).width; var w2 = 0; if (!kisa) { x.font = f2; w2 = x.measureText(tip || '').width; }
+  var M = 4 * R, bw = Math.ceil(Math.max(w1, w2) + 10 * R), bh = Math.round((kisa ? 14 : 22.5) * R);
+  cv.width = bw + 2 * M; cv.height = bh + 2 * M; x = cv.getContext('2d');
+  x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 3 * R; x.shadowOffsetY = R;
+  yuvarlakYol(x, M, M, bw, bh, 6 * R); x.fillStyle = c; x.fill();
+  x.shadowColor = 'transparent'; x.lineWidth = R; x.strokeStyle = koyu(c, st === 'yok' ? .2 : .4);
+  yuvarlakYol(x, M + R / 2, M + R / 2, bw - R, bh - R, 5.5 * R); x.stroke();
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = tx; x.font = f1;
+  x.fillText(no, M + bw / 2, M + (kisa ? bh / 2 + R / 2 : 7.6 * R));
+  if (!kisa) { x.font = f2; x.fillStyle = tc; x.fillText(tip || '', M + bw / 2, M + 16.6 * R); }
+  if (pend) { x.beginPath(); x.arc(M + bw - R, M + R, 4 * R, 0, Math.PI * 2); x.fillStyle = '#6E56CF'; x.fill(); x.lineWidth = 1.5 * R; x.strokeStyle = '#fff'; x.stroke(); }
+  var im = x.getImageData(0, 0, cv.width, cv.height);
+  if (MAP.hasImage(id)) MAP.removeImage(id);
+  MAP.addImage(id, im, { pixelRatio: R });
+  ETK.img[id] = 1;
+  return id;
+}
+function etiketKatman(map) {
+  var k = window.innerWidth >= 1000 ? 1.7 : 1;
+  var boy = ['interpolate', ['exponential', 1.6245], ['zoom'], 16.81, 0.42 * k, k > 1 ? 19.13 : 20.22, 2.2];
+  map.addSource('etiket', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  var kat = function (id, prop, minz, maxz) {
+    var o = { id: id, type: 'symbol', source: 'etiket',
+      layout: { 'icon-image': ['get', prop], 'icon-anchor': ['get', 'a'], 'icon-size': boy, 'icon-allow-overlap': true, 'icon-ignore-placement': true },
+      paint: { 'icon-opacity': ['case', ['==', ['get', 'dim'], 1], 0.3, 1] } };
+    if (minz != null) o.minzoom = minz; if (maxz != null) o.maxzoom = maxz;
+    map.addLayer(o);
+    map.on('click', id, function (e) { var f = e.features && e.features[0]; if (f) villaEtiketTik(f.properties.no); });
+    map.on('mouseenter', id, function () { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', id, function () { map.getCanvas().style.cursor = ''; });
+  };
+  kat('etiket-uzak', 'iu', null, 17.6); kat('etiket-yakin', 'iy', 17.6, null);
+}
+function villaEtiketTik(no) {
+  var m = MK[no]; if (!m || !MAP) return;
+  if (MAP.getZoom() < 17.6) { MAP.flyTo({ center: m.v.p, zoom: 18.4, duration: animSure(600), padding: hdrPad(0) }); daralt(); return; }
+  villaAc(no);
+}
+function etiketBoya(zorla) {
+  if (!MAP_HAZIR || !D || !META || !MAP.getSource('etiket')) return;
+  var q = S.ara.trim().toLowerCase(), imza = [], veri = [];
+  META.villas.forEach(function (v) {
+    var b = bina(v.no), st = b ? villaDurum(v.no, S.grup, S.mod) : 'yok';
+    var p = !!(b && (S.mod === 'genel' ? villaBekliyor(v.no, S.grup) : bek(v.no, S.mod)));
+    var dim = q && !(v.no.toLowerCase().indexOf(q) === 0 || (v.t || '').toLowerCase().indexOf(q) === 0) ? 1 : 0;
+    imza.push(st + (p ? 1 : 0) + dim); veri.push([v, st, p, dim]);
   });
+  var s = imza.join(','); if (!zorla && s === ETK.imza) return; ETK.imza = s;
+  MAP.getSource('etiket').setData({ type: 'FeatureCollection', features: veri.map(function (x) {
+    var v = x[0];
+    return { type: 'Feature', geometry: { type: 'Point', coordinates: v.p }, properties: { no: v.no, a: v.a, dim: x[3], iu: etiketResmi(v.no, v.t, x[1], x[2], true), iy: etiketResmi(v.no, v.t, x[1], x[2], false) } };
+  }) });
+}
+var VURGU = null;
+function vurgula(no) {
+  var m = MK[no]; if (!m || !MAP) return;
+  if (VURGU) VURGU.remove();
+  var e = document.createElement('div'); e.className = 'vurgu';
+  VURGU = new maplibregl.Marker({ element: e }).setLngLat(m.v.p).addTo(MAP);
+  setTimeout(function () { if (VURGU) { VURGU.remove(); VURGU = null; } }, 2700);
 }
 function mapUiCiz() {
   var u = $('mapUi'); if (!u) return;
@@ -663,9 +722,8 @@ function mapUiCiz() {
 }
 function villaGoster(no) {
   var m = MK[no]; if (!m || !MAP) return;
-  MAP.flyTo({ center: m.v.p, zoom: Math.max(MAP.getZoom(), 18.6), duration: 800 });
-  m.el.classList.remove('hit'); void m.el.offsetWidth; m.el.classList.add('hit');
-  setTimeout(function () { m.el.classList.remove('hit'); }, 3800);
+  MAP.flyTo({ center: m.v.p, zoom: Math.max(MAP.getZoom(), 18.6), duration: animSure(800), padding: hdrPad(0) });
+  vurgula(no);
 }
 
 /* ---------- GPS ve kalibrasyon ---------- */
@@ -713,7 +771,7 @@ function gpsAc() {
     var cal = kalibrasyon();
     if (cal.f && MAP) {
       var m = cal.f(g.pos.lon, g.pos.lat);
-      if (!GPSMK) { var e = document.createElement('div'); e.className = 'gpsdot'; GPSMK = new maplibregl.Marker({ element: e }).setLngLat(m).addTo(MAP); MAP.flyTo({ center: m, zoom: Math.max(MAP.getZoom(), 18) }); }
+      if (!GPSMK) { var e = document.createElement('div'); e.className = 'gpsdot'; GPSMK = new maplibregl.Marker({ element: e }).setLngLat(m).addTo(MAP); MAP.flyTo({ center: m, zoom: Math.max(MAP.getZoom(), 18), padding: hdrPad(0) }); }
       else GPSMK.setLngLat(m);
     }
     mapUiCiz();
@@ -790,7 +848,7 @@ function vListe() {
   var bs = filtre(adaBinalar(S.ada)), ks = kalemlerOf(S.grup);
   var gruplar_ = {};
   bs.forEach(function (b) { var g = b.cins; (gruplar_[g] = gruplar_[g] || []).push(b); });
-  var h = kuyrukBanner();
+  var h = kuyrukBanner() + '<div class="filtrow">' + cinsLink() + '</div>';
   if (!bs.length) h += '<div class="card mut">' + L('Eşleşen villa yok.', 'No matching villas.') + '</div>';
   Object.keys(gruplar_).forEach(function (g) {
     var L_ = gruplar_[g], ok = L_.filter(function (b) { return villaDurum(b.id, S.grup) === 'ok'; }).length;
@@ -819,7 +877,7 @@ function villaAc(id) {
   S.villa = id; S.vg = S.grup; S.ed = {}; S.acik = {}; S.tarihAc = {}; S.notAc = {};
   if (ilk) gecmisEkle('villa');
   panelCiz();
-  if (MAP && S.tab === 'harita') { var m = MK[id]; if (m) { m.el.classList.add('hit'); setTimeout(function () { m.el.classList.remove('hit'); }, 2500); } }
+  if (MAP && S.tab === 'harita') vurgula(id);
 }
 function villaKapat(gecmis) {
   var f = function () { S.villa = null; S.ed = {}; panelCiz(); if (!gecmis) try { history.back(); } catch (e) {} };
@@ -843,17 +901,17 @@ function panelCiz() {
   var p = $('panel'); if (!p) return;
   if (!S.villa) {
     if (p.classList.contains('hide') || p._kapan) return;
-    p._kapan = 1; p.classList.remove('giris'); p.classList.add('cikis');
-    setTimeout(function () { p._kapan = 0; p.classList.remove('cikis'); if (!S.villa) { p.classList.add('hide'); p.innerHTML = ''; } if (MAP) MAP.resize(); }, azHareket() ? 0 : 240);
+    p._kapan = 1; p.classList.add('bas');
+    setTimeout(function () { p._kapan = 0; if (!S.villa) { p.classList.add('hide'); p.innerHTML = ''; } }, animSure(220));
     return;
   }
-  var panelIlk = p.classList.contains('hide') || p._kapan; p._kapan = 0; p.classList.remove('cikis');
+  var panelIlk = p.classList.contains('hide') || p._kapan; p._kapan = 0;
+  if (panelIlk) p.classList.add('bas');
   var b = bina(S.villa), g = S.vg || S.grup, ks = kalemlerOf(g);
   var aktif = ks.filter(function (k) { return onayli(b.id, k.id).d !== 'YOK' || (taslak(k.id) && taslak(k.id).d !== 'YOK'); });
   var yok = ks.filter(function (k) { return aktif.indexOf(k) < 0; });
   var n = degisiklikSay(), pc = villaYuzde(b.id, g);
   p.classList.remove('hide');
-  if (panelIlk) { p.classList.remove('giris'); void p.offsetWidth; p.classList.add('giris'); setTimeout(function () { if (MAP) MAP.resize(); }, 300); }
   p.innerHTML = '<div class="ph"><div class="row" style="display:flex;align-items:center;gap:10px">' +
     '<button class="iconbtn" onclick="villaKapat()" aria-label="' + L('Kapat', 'Close') + '">' + I.back + '</button>' +
     '<div class="grow"><div class="h" style="font-size:24px;line-height:1.1">' + L('Villa ', 'Villa ') + esc(b.id) + (pc != null ? ' <span style="font-size:14px;color:var(--mut2)">%' + pc + '</span>' : '') + '</div>' +
@@ -866,6 +924,7 @@ function panelCiz() {
     (yok.length ? '<div class="sec">' + L('Kapsam dışı', 'Out of scope') + '</div>' + yok.map(function (k) { return kalemKart(b, k); }).join('') : '') +
     '</div>' +
     '<div class="pf"><button class="btn full" ' + (n ? '' : 'disabled') + ' onclick="villaGonder()">' + (n ? L(n + ' değişikliği onaya gönder', 'Send ' + n + ' change' + (n > 1 ? 's' : '') + ' for approval') : L('Değişiklik yok', 'No changes')) + '</button></div>';
+  if (panelIlk) requestAnimationFrame(function () { requestAnimationFrame(function () { p.classList.remove('bas'); }); });
 }
 function panelGrup(g) { S.vg = g; panelCiz(); }
 function haritadaGoster() {
@@ -1012,7 +1071,7 @@ function vToplu() {
     (tp.d === 'DEVAM' || tp.d === 'TAMAMLANDI' ? '<div class="frow"><span class="lb">' + L('Firma', 'Company') + (fs.length ? ' *' : '') + '</span>' + (fs.length ? fs : (D.firmalar || []).filter(function (f) { return f.aktif; }).slice(0, 0)).map(function (f) { return '<button class="fchip ' + (tp.f === f.ad ? 'on' : '') + '" onclick="S.tp.f=S.tp.f===' + jq(f.ad) + '?\'\':' + jq(f.ad) + ';viewCiz()">' + esc(f.kisa || f.ad) + '</button>'; }).join('') +
       '<span class="note">' + (fs.length ? L('Boş bırakılırsa villadaki mevcut firma korunur.', 'If empty, the villa’s current company is kept.') : L('Bu kaleme atanmış firma yok.', 'No company assigned to this item.')) + '</span></div>' : '') +
     '</div>' +
-    '<div class="grpT"><b>3 · ' + L('Villalar', 'Villas') + ' <span class="t2">(' + secN + '/' + bs.length + ')</span></b><span><button class="lnk" onclick="topluHepsi(true)">' + L('Tümü', 'All') + '</button><button class="lnk" onclick="topluHepsi(false)">' + L('Temizle', 'Clear') + '</button></span></div>' +
+    '<div class="grpT"><b>3 · ' + L('Villalar', 'Villas') + ' <span class="t2">(' + secN + '/' + bs.length + ')</span></b><span style="display:inline-flex;gap:4px;align-items:center">' + cinsLink() + '<button class="lnk" onclick="topluHepsi(true)">' + L('Tümü', 'All') + '</button><button class="lnk" onclick="topluHepsi(false)">' + L('Temizle', 'Clear') + '</button></span></div>' +
     (bs.length ? '' : '<div class="card mut">' + L('Bu filtrede villa yok. Ada, villa cinsi ya da arama seçimini değiştirin.', 'No villas match this filter. Change the island, villa kind or search.') + '</div>') +
     '<div class="vgrid">' + bs.map(function (b) {
       var s = onayli(b.id, k.id), sel = !!tp.sec[b.id];
@@ -1152,9 +1211,17 @@ function vDiger() {
     sat('cihazlar', I.devices, L('Cihazlarım', 'My devices'), L('Bağlı cihazları gör ve kaldır', 'See and remove linked devices')) +
     sat('davet', I.qr, L('Davet linki ve QR', 'Invite link and QR'), L('Yeni kullanıcı kaydı için', 'For new user registration')) +
     (gpsYetki() ? sat('gps', I.gps, L('GPS kalibrasyonu', 'GPS calibration'), ((D.gps || []).length) + ' ' + L('nokta', 'points') + ((D.gps || []).length >= 3 ? ' · ' + L('hazır', 'ready') : ' · ' + L('en az 3 gerekli', 'at least 3 needed'))) : '') +
+    sat('animMenu()', I.layers, L('Animasyonlar', 'Animations'), animAd(ls('mxm_anim') || 'oto') + (ls('mxm_anim') ? '' : ' · ' + (animSeviye() === 'tam' ? L('tam', 'full') : L('sade', 'light')))) +
     sat('dilDegis()', I.globe, L('Dil: Türkçe', 'Language: English'), L('English’e geç', 'Switch to Türkçe')) +
     sat('hakkinda', I.info, L('Hakkında ve senkron', 'About and sync'), 'v' + APP_SURUM + (q ? ' · ' + q + ' ' + L('gönderilecek', 'to send') : '') + (S.sonSenk ? ' · ' + L('son senkron ', 'last sync ') + esc(S.sonSenk) : '')) +
     '</div>';
+}
+function animAd(a) { return { oto: L('Otomatik', 'Automatic'), tam: L('Tam', 'Full'), sade: L('Sade', 'Light'), kapali: L('Kapalı', 'Off') }[a] || a; }
+function animMenu() {
+  var su = ls('mxm_anim') || 'oto';
+  soru(L('Animasyonlar', 'Animations'), '<div class="stack">' + [['oto', L('Telefonun gücüne göre kendisi seçer', 'Chosen by device performance')], ['tam', L('Yumuşak açılıp kapanma ve kayma', 'Smooth open/close and slide')], ['sade', L('Yalnız kısa solma; zayıf telefonlar için', 'Short fades only; for slower phones')], ['kapali', L('Hiç hareket yok, en hızlı', 'No motion, fastest')]].map(function (x) {
+    return '<button class="list-row" style="box-shadow:' + (su === x[0] ? '0 0 0 2px var(--acc)' : 'none') + ';background:var(--soft)" onclick="ls(\'mxm_anim\',\'' + x[0] + '\');animUygula();modalKapat();viewCiz()"><span class="grow"><span class="t1" style="display:block">' + animAd(x[0]) + '</span><span class="t2" style="display:block">' + x[1] + '</span></span>' + (su === x[0] ? I.ok : '') + '</button>';
+  }).join('') + '</div>', null, null, null, L('Kapat', 'Close'));
 }
 function dilDegis() { dilSec(S.dil === 'EN' ? 'TR' : 'EN'); }
 
@@ -1442,4 +1509,5 @@ if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {
 }
 setInterval(function () { if (S.scr === 'bekle' && document.visibilityState === 'visible') api('ben').then(function (r) { ls(K.ben, r.kullanici); if (r.kullanici.durum === 'ONAYLI') { toast(L('Kaydınız onaylandı', 'Your registration was approved')); veriAl(); } }, function (e) { if (e.kod) hata(e); }); }, 30000);
 document.documentElement.lang = S.dil === 'EN' ? 'en' : 'tr';
+animUygula();
 baslat();

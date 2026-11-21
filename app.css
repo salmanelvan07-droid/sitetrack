@@ -21,14 +21,51 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
 #stage{position:relative;flex:1;min-height:0}
 #mapWrap{position:absolute;inset:0;background:#6C93B6}
 #map{position:absolute;inset:0}
-#view{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(var(--navH) + 40px + var(--safeB));background:var(--bg)}
+#view{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--hdrH,0px) + 14px) 14px calc(var(--navH) + 40px + var(--safeB));background:var(--bg)}
 #view.wide{max-width:1100px;margin:0 auto}
 
 /* ---------- üst seçim alanı ---------- */
-#hdr{position:relative;z-index:20;background:linear-gradient(150deg,#0B1220 0%,#0F3446 62%,#0F6E8C 100%);color:#fff;border-radius:0 0 26px 26px;box-shadow:0 8px 26px rgba(11,18,32,.22);padding:calc(10px + var(--safeT)) 16px 12px}
-#hdr.anim{transition:height .34s cubic-bezier(.22,.8,.24,1),padding .34s cubic-bezier(.22,.8,.24,1),border-radius .34s}
-#hdr .hic.belir{animation:belir .34s ease both}
-@keyframes belir{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+#hdr{position:absolute;top:0;left:0;right:0;z-index:20;background:linear-gradient(150deg,#0B1220 0%,#0F3446 62%,#0F6E8C 100%);color:#fff;border-radius:0 0 24px 24px;box-shadow:0 6px 18px rgba(11,18,32,.24);padding:calc(10px + var(--safeT)) 12px 8px}
+#hdr.anim{transition:height .24s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+#hdr .hic.belir{animation:solgun .22s ease both}
+@keyframes solgun{from{opacity:0}to{opacity:1}}
+@keyframes belir{from{opacity:0}to{opacity:1}}
+/* sıkı açık hal */
+.r1{display:flex;gap:8px;align-items:center}
+#hdr .r1 .seg{margin:0;padding:3px;border-radius:13px;gap:3px}
+#hdr .r1 .seg button{height:38px;font-size:13.5px;padding:0 10px;line-height:1}
+#hdr .sada{flex:none;grid-auto-columns:42px}
+#hdr .sgrp{flex:1;min-width:0}
+#hdr .r1 .ava{margin-left:auto;width:38px;height:38px}
+.ozs{display:flex;align-items:center;gap:10px;margin-top:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px 10px}
+.ozs .yz{font-family:Manrope,Inter,sans-serif;font-weight:800;font-size:22px;line-height:1;flex:none}
+.ozs .m{flex:1;min-width:0}
+.ozs .dbar{height:6px;margin:0 0 4px}
+.ozs .dleg{font-size:11px;gap:9px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+.ozs .dleg span i{width:7px;height:7px;border-radius:2px}
+.ozs .dleg .ek{color:#A7C4D1}
+.ozs .hp{height:22px;font-size:11px;padding:0 8px}
+#hdr .search{height:40px;margin-top:8px;border-radius:12px}
+.dd{margin-top:8px}
+.ddb{width:100%;height:40px;border:0;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;font-weight:700;font-size:13.5px}
+.ddb .ad,.ddl .ad{flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ddb em,.ddl em{font-style:normal;opacity:.75;font-weight:700;flex:none}
+.ddb .ok{display:flex;flex:none;transition:transform .2s}
+.dd.acik .ddb .ok{transform:rotate(180deg)}
+.dd .d{width:9px;height:9px;border-radius:5px;flex:none}
+.ddl{margin-top:6px;background:rgba(11,18,32,.5);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:4px;display:flex;flex-direction:column;max-height:46vh;overflow:auto;animation:ddAc .16s ease both}
+.ddl button{min-height:40px;border:0;background:transparent;color:#DCE8EE;display:flex;align-items:center;gap:9px;padding:0 10px;border-radius:10px;font-weight:600;font-size:13.5px}
+.ddl button.on{background:rgba(255,255,255,.13);color:#fff;font-weight:700}
+.ddl button svg{flex:none}
+@keyframes ddAc{from{opacity:0}to{opacity:1}}
+#hdr .grab{margin-top:7px;height:4px;width:38px}
+/* villa tipi filtresi (liste ve toplu içinde) */
+.filtrow{display:flex;justify-content:flex-end;margin:-2px 0 2px}
+.cinsl{border:0;background:#fff;box-shadow:inset 0 0 0 1.5px #D5DBE3;height:32px;border-radius:16px;padding:0 12px;font-weight:600;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.cinsl b{color:var(--ink)}
+/* harita vurgu halkası */
+.vurgu{width:34px;height:34px;border-radius:50%;border:3px solid #0F6E8C;box-shadow:0 0 0 2px #fff;pointer-events:none;animation:vurgu .9s ease-out 3}
+@keyframes vurgu{from{transform:scale(.5);opacity:1}to{transform:scale(1.7);opacity:0}}
 #hdr .row{display:flex;align-items:center;gap:10px}
 #hdr .brand{flex:1;min-width:0;display:flex;flex-direction:column}
 #hdr .brand .h{font-size:22px;line-height:1.1}
@@ -127,7 +164,7 @@ textarea.inp{height:auto;min-height:70px;padding:10px 14px;resize:vertical}
 .foot{display:flex;gap:8px;margin-top:14px}
 /* sabit alt eylem çubuğu: telefonda menünün üstünde, geniş ekranda sayfanın altında */
 #eylem{position:absolute;left:12px;right:12px;bottom:calc(var(--navH) + 22px + var(--safeB));z-index:25;display:flex;justify-content:center;pointer-events:none}
-#eylem .foot{margin:0;width:100%;max-width:1100px;pointer-events:auto;padding:8px;border-radius:24px;background:rgba(243,245,248,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 28px rgba(11,18,32,.16)}
+#eylem .foot{margin:0;width:100%;max-width:1100px;pointer-events:auto;padding:8px;border-radius:24px;background:rgba(243,245,248,.96);box-shadow:0 6px 20px rgba(11,18,32,.16)}
 #eylem.dar .foot{max-width:900px}
 #view.ayakli{padding-bottom:calc(var(--navH) + 120px + var(--safeB))}
 .icerik.dar{max-width:900px;margin:0 auto}
@@ -219,7 +256,7 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
 .legend .r{display:flex;gap:10px;flex-wrap:wrap}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .legend span i{width:12px;height:12px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
-.near{position:absolute;left:12px;right:72px;top:12px;z-index:11;background:#fff;border-radius:18px;box-shadow:var(--shL);padding:10px 12px;display:flex;align-items:center;gap:10px}
+.near{position:absolute;left:12px;right:72px;top:calc(var(--hdrH,0px) + 12px);z-index:11;background:#fff;border-radius:18px;box-shadow:var(--shL);padding:10px 12px;display:flex;align-items:center;gap:10px}
 .gpsdot{width:18px;height:18px;border-radius:9px;background:#1A73E8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
 
 
@@ -277,7 +314,7 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
   #rail .mk{width:54px;height:54px;margin:0 auto 14px;border-radius:16px;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;font-family:Manrope,sans-serif;font-weight:800;font-size:14px}
   #rail button{height:62px;font-size:11px}
   #nav{display:none}
-  #hdr{border-radius:0 0 26px 26px;margin:0 16px;}
+  #hdr{border-radius:0 0 24px 24px;left:16px;right:16px}
   #hdr.big .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   #hdr.big .grid2 .seg{margin-top:12px}
   #panel{position:relative;inset:auto;width:460px;flex:none;border-radius:0;box-shadow:-6px 0 24px rgba(11,18,32,.08)}
@@ -285,42 +322,31 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
   #eylem{bottom:16px;left:24px;right:24px}
   #view.ayakli{padding-bottom:110px}
   #toast{bottom:30px}
-  #view{padding:18px 24px 40px}
+  #view{padding:calc(var(--hdrH,0px) + 18px) 24px 40px}
 }
 
 .foot .btn:disabled{opacity:1;background:#D0D5DD;color:#fff}
 #panel .pf .btn:disabled{opacity:1;background:#D0D5DD}
 
-/* ---------- yumuşak hareketler ---------- */
-.modal{animation:mFade .2s ease both}
-.modal .box{animation:mRise .28s cubic-bezier(.22,.8,.24,1) both}
-.modal.cikis{animation:mFadeOut .18s ease both}
-.modal.cikis .box{animation:mDrop .18s ease both}
+/* ---------- yumuşak hareketler (yalnız opaklık ve kaydırma: ekran kartında çalışır) ---------- */
+.modal{animation:mFade .18s ease both}
+.modal .box{animation:mRise .22s cubic-bezier(.2,.8,.2,1) both}
+.modal.cikis{animation:mFadeOut .16s ease both}
+.modal.cikis .box{animation:mDrop .16s ease both}
 @keyframes mFade{from{opacity:0}to{opacity:1}}
 @keyframes mFadeOut{from{opacity:1}to{opacity:0}}
-@keyframes mRise{from{transform:translateY(28px);opacity:.4}to{transform:none;opacity:1}}
-@keyframes mDrop{from{transform:none}to{transform:translateY(18px)}}
-#panel.giris{animation:pAlt .3s cubic-bezier(.22,.8,.24,1) both}
-#panel.cikis{animation:pAltCik .24s ease both}
-@keyframes pAlt{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
-@keyframes pAltCik{from{transform:none;opacity:1}to{transform:translateY(48px);opacity:0}}
-#view.gecis>.icerik{animation:belir .24s ease both}
-#mapWrap.gecis{animation:mFade .3s ease both}
-#eylem.giris .foot{animation:yuksel .28s cubic-bezier(.22,.8,.24,1) both}
-@keyframes yuksel{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
-.kc{transition:box-shadow .25s}
-@media (min-width:700px){
-  #panel.giris{animation-name:pSag}
-  #panel.cikis{animation-name:pSagCik}
-  @keyframes pSag{from{transform:translateX(56px);opacity:0}to{transform:none;opacity:1}}
-  @keyframes pSagCik{from{transform:none;opacity:1}to{transform:translateX(56px);opacity:0}}
-}
-@media (min-width:1000px){
-  #panel.giris{animation:pGen .32s cubic-bezier(.22,.8,.24,1) both}
-  #panel.cikis{animation:pGenCik .24s ease both}
-  @keyframes pGen{from{width:0;opacity:0}to{width:460px;opacity:1}}
-  @keyframes pGenCik{from{width:460px;opacity:1}to{width:0;opacity:0}}
-}
+@keyframes mRise{from{transform:translateY(24px)}to{transform:none}}
+@keyframes mDrop{from{transform:none}to{transform:translateY(16px)}}
+#panel{transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+#panel.bas{opacity:0;transform:translateY(32px)}
+#view.gecis>.icerik{animation:solgun .16s ease both}
+#eylem.giris .foot{animation:yuksel .2s cubic-bezier(.2,.8,.2,1) both}
+@keyframes yuksel{from{transform:translateY(18px);opacity:0}to{transform:none;opacity:1}}
+@media (min-width:700px){ #panel.bas{transform:translateX(36px)} }
+/* animasyon seviyesi: sade = kısa solma, kapalı = hiç */
+html.anim-sade *,html.anim-sade *::before,html.anim-sade *::after{animation-duration:.12s!important;transition-duration:.12s!important}
+html.anim-sade #panel.bas,html.anim-sade .modal .box{transform:none!important}
+html.anim-yok *,html.anim-yok *::before,html.anim-yok *::after{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
