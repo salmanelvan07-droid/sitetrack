@@ -64,7 +64,7 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
 .stack{display:flex;flex-direction:column;gap:10px}
 .sec{font-size:12.5px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:8px 2px 0}
 .btn{height:54px;border:0;border-radius:18px;background:var(--ink);color:#fff;font-weight:700;font-size:15.5px;padding:0 20px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.btn.acc{background:var(--acc)}.btn.ok{background:var(--ok)}.btn.bad{background:var(--bad)}.btn.lt{background:var(--card);color:var(--ink);box-shadow:var(--sh)}.btn.soft{background:var(--soft);color:var(--ink2)}
+.btn.acc{background:var(--acc)}.btn.ok{background:var(--ok)}.btn.bad{background:var(--bad)}.btn.lt{background:var(--card);color:var(--ink);box-shadow:var(--sh)}.btn.soft{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px #D5DBE3}
 .btn.sm{height:40px;border-radius:13px;font-size:13.5px;padding:0 14px}
 .btn:disabled{opacity:.45}
 .btn.full{width:100%}
@@ -77,8 +77,21 @@ textarea.inp{height:auto;min-height:70px;padding:10px 14px;resize:vertical}
 .ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:800;font-family:Manrope,sans-serif;font-size:14px}
 .grow{flex:1;min-width:0}
 .t1{font-size:15px;font-weight:700}.t2{font-size:12.5px;color:var(--mut);margin-top:2px}
-.foot{position:sticky;bottom:calc(var(--navH) + 24px + var(--safeB));margin-top:14px;display:flex;gap:8px;z-index:5}
-.foot.solo{bottom:calc(10px + var(--safeB))}
+.foot{display:flex;gap:8px;margin-top:14px}
+/* sabit alt eylem çubuğu: telefonda menünün üstünde, geniş ekranda sayfanın altında */
+#eylem{position:absolute;left:12px;right:12px;bottom:calc(var(--navH) + 22px + var(--safeB));z-index:25;display:flex;justify-content:center;pointer-events:none}
+#eylem .foot{margin:0;width:100%;max-width:1100px;pointer-events:auto;padding:8px;border-radius:24px;background:rgba(243,245,248,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 28px rgba(11,18,32,.16)}
+#eylem.dar .foot{max-width:900px}
+#view.ayakli{padding-bottom:calc(var(--navH) + 120px + var(--safeB))}
+.icerik.dar{max-width:900px;margin:0 auto}
+.icerik{max-width:1100px;margin:0 auto}
+/* villa kartı ek satırı */
+.ekrow{display:flex;gap:8px;flex-wrap:wrap}
+.ekbtn{height:36px;padding:0 12px;border-radius:12px;border:1.5px dashed #D0D5DD;background:#fff;color:var(--ink2);font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ekbtn.on{border-style:solid;border-color:var(--acc);color:var(--acc);background:var(--accS)}
+/* haritada uzak görünümde yalnız villa numarası */
+#map.uzak .vl i{display:none}
+#map.uzak .vl .in{padding:1px 4px}
 
 /* ---------- villa listesi ---------- */
 .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
@@ -126,7 +139,7 @@ textarea.inp{height:auto;min-height:70px;padding:10px 14px;resize:vertical}
 .prog .lab{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--mut)}
 .prog .lab b{font-family:Manrope,sans-serif;font-size:18px;color:var(--ink)}
 input[type=range]{width:100%;accent-color:var(--wip);height:28px}
-.qk{display:flex;gap:6px}.qk button{flex:1;height:36px;border-radius:10px;border:0;background:var(--soft);font-weight:700;font-size:12.5px;color:var(--ink2)}
+.qk{display:flex;gap:6px}.qk button{flex:1;height:36px;white-space:nowrap;padding:0 6px;border-radius:10px;border:0;background:var(--soft);font-weight:700;font-size:12.5px;color:var(--ink2)}
 .qk button.on{background:var(--wip);color:#2B1F00}
 .frow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .frow .lb{font-size:12.5px;font-weight:600;color:var(--mut);margin-right:2px}
@@ -222,7 +235,8 @@ input[type=range]{width:100%;accent-color:var(--wip);height:28px}
   #hdr.big .grid2 .seg{margin-top:12px}
   #panel{position:relative;inset:auto;width:460px;flex:none;border-radius:0;box-shadow:-6px 0 24px rgba(11,18,32,.08)}
   .mapctl,.legend{bottom:20px}
-  .foot{bottom:16px}
+  #eylem{bottom:16px;left:24px;right:24px}
+  #view.ayakli{padding-bottom:110px}
   #toast{bottom:30px}
   #view{padding:18px 24px 40px}
 }

@@ -249,6 +249,8 @@ var I = {
   layers: svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
   link: svg('<rect x="2" y="5" width="12" height="9" rx="1.5"/><path d="M5 18h6M8 14v4"/><rect x="16" y="8" width="6" height="12" rx="1.5"/><path d="M18.5 17.5h1"/>'),
   devices: svg('<rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/>'),
+  takvim: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>', 16),
+  not: svg('<path d="M5 4h14v12l-4 4H5z"/><path d="M15 20v-4h4M8 9h8M8 13h5"/>', 16),
   sync: svg('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M4 4v4h4M20 20v-4h-4"/>')
 };
 
@@ -382,7 +384,7 @@ function render() {
     return;
   }
   if (!SHELL) {
-    app.innerHTML = '<div id="shell"><nav id="rail" aria-label="menu"></nav><div id="col"><header id="hdr"></header><div id="stage"><div id="mapWrap"><div id="map"></div><div id="mapUi"></div></div><div id="view" class="hide"></div></div><nav id="nav" aria-label="menu"></nav></div><aside id="panel" class="hide"></aside></div>';
+    app.innerHTML = '<div id="shell"><nav id="rail" aria-label="menu"></nav><div id="col"><header id="hdr"></header><div id="stage"><div id="mapWrap"><div id="map"></div><div id="mapUi"></div></div><div id="view" class="hide"></div><div id="eylem" class="hide"></div></div><nav id="nav" aria-label="menu"></nav></div><aside id="panel" class="hide"></aside></div>';
     SHELL = true; mapKur();
     try { new ResizeObserver(function () { if (MAP) MAP.resize(); }).observe($('stage')); } catch (e) {}
   }
@@ -391,6 +393,7 @@ function render() {
 }
 var SUB_DERIN = 0;
 function sekme(t) {
+  if (t === 'toplu' && S.tab !== 'toplu') S.big = false;
   S.tab = t;
   if (S.sub && SUB_DERIN > 0) { var d = SUB_DERIN; SUB_DERIN = 0; S.subGeri = 1; try { history.go(-d); } catch (e) { S.subGeri = 0; } }
   S.sub = null;
@@ -529,7 +532,9 @@ function mapKur() {
         var sp = document.createElement('div'); sp.className = 'nm ' + (n.g ? 'g' : 's'); sp.textContent = n.n; e.appendChild(sp);
         new maplibregl.Marker({ element: e }).setLngLat(n.p).addTo(map);
       });
-      var upd = function () { var z = map.getZoom(); var r = document.documentElement.style; r.setProperty('--s', Math.min(2.2, Math.max(0.42, Math.pow(2, (z - 18.6) * 0.7)))); r.setProperty('--n', Math.min(1.5, Math.max(1, Math.pow(2, (z - 15) / 4)))); };
+      var upd = function () { var z = map.getZoom(), r = document.documentElement.style, k = window.innerWidth >= 1000 ? 1.7 : 1;
+        r.setProperty('--s', Math.min(2.2, Math.max(0.42 * k, k * Math.pow(2, (z - 18.6) * 0.7))));
+        var mw = $('map'); if (mw) mw.classList.toggle('uzak', z < 17.6); r.setProperty('--n', Math.min(1.5, Math.max(1, Math.pow(2, (z - 15) / 4)))); };
       map.on('zoom', upd); upd();
       map.on('dragstart', function () { if (S.tab === 'harita') daralt(); });
       MAP_HAZIR = true; etiketBoya(); mapUiCiz();
@@ -676,13 +681,23 @@ function buradayim(no) {
 }
 
 /* ================= görünüm dağıtıcı ================= */
+/* Sayfanın alt eylem butonlarını (.foot) içerikten alıp ekranın altındaki sabit çubuğa taşır */
+function eylemTasi(v, genis) {
+  var ey = $('eylem'); if (!ey) return;
+  ey.innerHTML = '';
+  var f = v && v.querySelector('.foot');
+  if (f) { ey.appendChild(f); ey.className = genis ? '' : 'dar'; v.classList.add('ayakli'); }
+  else { ey.className = 'hide'; if (v) v.classList.remove('ayakli'); }
+}
 function viewCiz() {
   var v = $('view');
   mapUiCiz();
-  if (S.tab === 'harita') { v.classList.add('hide'); return; }
+  if (S.tab === 'harita') { v.classList.add('hide'); eylemTasi(null); return; }
   v.classList.remove('hide');
   var y = v.scrollTop;
-  v.innerHTML = S.tab === 'liste' ? vListe() : S.tab === 'toplu' ? vToplu() : S.tab === 'onay' ? vOnay() : vDiger();
+  var genis = S.tab === 'liste' || S.tab === 'toplu';
+  v.innerHTML = '<div class="icerik' + (genis ? '' : ' dar') + '">' + (S.tab === 'liste' ? vListe() : S.tab === 'toplu' ? vToplu() : S.tab === 'onay' ? vOnay() : vDiger()) + '</div>';
+  eylemTasi(v, genis);
   v.scrollTop = y;
   if (!v._bagli) { v._bagli = 1; v.addEventListener('scroll', function () { if (v.scrollTop > 30 && (S.tab === 'liste' || S.tab === 'toplu')) daralt(); }, { passive: true }); }
   if (S.tab === 'diger' && S.sub === 'davet') qrCiz();
@@ -730,7 +745,7 @@ function villaAc(id) {
   }
   var ilk = !S.villa;
   S.villa = id; S.vg = S.grup; S.ed = {}; S.acik = {}; S.tarihAc = {}; S.notAc = {};
-  if (ilk) try { history.pushState({ p: 'villa' }, ''); } catch (e) {}
+  if (ilk) gecmisEkle('villa');
   panelCiz();
   if (MAP && S.tab === 'harita') { var m = MK[id]; if (m) { m.el.classList.add('hit'); setTimeout(function () { m.el.classList.remove('hit'); }, 2500); } }
 }
@@ -739,7 +754,12 @@ function villaKapat(gecmis) {
   if (degisiklikSay() > 0) return soru(L('Değişiklikler gönderilmedi', 'Changes not sent'), L('Çıkarsanız bu villadaki değişiklikler kaybolur.', 'If you leave, the changes for this villa are lost.'), L('Çık', 'Leave'), f, 'bad', L('Kal', 'Stay'));
   f();
 }
-window.addEventListener('popstate', function () { if (S.villa) { if (degisiklikSay() > 0) { try { history.pushState({ p: 'villa' }, ''); } catch (e) {} villaKapat(true); } else { S.villa = null; panelCiz(); } } else if (S.subGeri) { S.subGeri = 0; } else if (S.sub) { SUB_DERIN = Math.max(0, SUB_DERIN - 1); S.sub = S.sub === 'firma' ? 'firmalar' : null; render(); } });
+/* Geri tuşu için geçmiş kaydı. Sekme değişiminden kalan geri gitme henüz bitmediyse kayıt, o bitince eklenir. */
+var BEK_PUSH = 0;
+function gecmisEkle(p) { if (S.subGeri) { BEK_PUSH++; return; } try { history.pushState({ p: p }, ''); } catch (e) {} }
+window.addEventListener('popstate', function () {
+  if (S.subGeri) { S.subGeri = 0; while (BEK_PUSH > 0) { BEK_PUSH--; try { history.pushState({ p: 'sub' }, ''); } catch (e) {} } return; }
+  if (S.villa) { if (degisiklikSay() > 0) { try { history.pushState({ p: 'villa' }, ''); } catch (e) {} villaKapat(true); } else { S.villa = null; panelCiz(); } } else if (S.sub) { SUB_DERIN = Math.max(0, SUB_DERIN - 1); S.sub = S.sub === 'firma' ? 'firmalar' : null; render(); } });
 function taslak(k) { return S.ed[k]; }
 function degisiklikSay() { return Object.keys(S.ed).filter(function (k) { return farkli(k); }).length; }
 function farkli(kid) {
@@ -788,7 +808,7 @@ function kalemKart(b, k) {
   var ic = v.d === 'TAMAMLANDI' ? I.ok : v.d === 'DEVAM' ? I.clock : v.d === 'YOK' ? I.dash : I.ring;
   var alt = [];
   if (efB(v)) alt.push(efB(v)); if (efE(v)) alt.push('→ ' + efE(v));
-  if (v.d === 'DEVAM') alt.push('%' + (v.y !== '' && v.y != null ? v.y : '—'));
+  if (v.d === 'DEVAM') alt.push(v.y !== '' && v.y != null ? '%' + v.y : L('% girilmedi', '% not set'));
   if (v.f) alt.push(fkisa(v.f));
   var stLab = base.pend && !ed ? L('Onayda', 'Pending') : dAd(v.d);
   var h = '<div class="kc ' + (ac || ed ? 'ed' : '') + '"><button class="top" onclick="kalemAc(\'' + k.id + '\')">' +
@@ -809,9 +829,9 @@ function kalemKart(b, k) {
     var fl = fs.slice(); if (v.f && !fs.some(function (f) { return f.ad === v.f; })) { var fx = firma(v.f); fl.push(fx || { ad: v.f, kisa: v.f }); }
     h += '<div class="frow"><span class="lb">' + L('Firma', 'Company') + '</span>' +
       fl.map(function (f) { return '<button class="fchip ' + (v.f === f.ad ? 'on' : (gerek && !v.f && ed ? 'req' : '')) + '" onclick="firmaSec(\'' + k.id + '\',' + jq(f.ad) + ')">' + esc(f.kisa || f.ad) + '</button>'; }).join('') +
-      '<button class="lnk" onclick="firmaListe(\'' + k.id + '\')">' + (fl.length ? L('Diğer', 'Other') : L('Firma seç', 'Choose')) + '</button>' +
-      '<button class="lnk" style="margin-left:auto" onclick="S.tarihAc[\'' + k.id + '\']=!S.tarihAc[\'' + k.id + '\'];panelCiz()">' + L('Tarih', 'Dates') + '</button>' +
-      '<button class="lnk" onclick="S.notAc[\'' + k.id + '\']=!S.notAc[\'' + k.id + '\'];panelCiz()">' + L('Not', 'Note') + '</button></div>';
+      '<button class="lnk" onclick="firmaListe(\'' + k.id + '\')">' + (fl.length ? L('Diğer', 'Other') : L('Firma seç', 'Choose')) + '</button></div>' +
+      '<div class="ekrow"><button class="ekbtn' + (S.tarihAc[k.id] ? ' on' : '') + '" onclick="S.tarihAc[\'' + k.id + '\']=!S.tarihAc[\'' + k.id + '\'];panelCiz()">' + I.takvim + L('Gerçek tarih', 'Actual dates') + (v.b || v.e ? ' •' : '') + '</button>' +
+      '<button class="ekbtn' + (S.notAc[k.id] || v.n ? ' on' : '') + '" onclick="S.notAc[\'' + k.id + '\']=!S.notAc[\'' + k.id + '\'];panelCiz()">' + I.not + L('Not', 'Note') + (v.n ? ' •' : '') + '</button></div>';
     if (gerek && !v.f && ed) h += '<div class="note" style="color:var(--bad);font-weight:600">' + L('Bu kalem için firma seçimi zorunlu.', 'A company is required for this item.') + '</div>';
     if (S.tarihAc[k.id]) h += '<div class="dates"><div class="field"><label>' + L('Gerçek başlama', 'Actual start') + '</label><input type="date" class="inp" max="' + toISO(bugun()) + '" value="' + toISO(v.b) + '" onchange="tarihSec(\'' + k.id + '\',\'b\',this.value)"></div>' +
       '<div class="field"><label>' + L('Gerçek bitiş', 'Actual finish') + '</label><input type="date" class="inp" max="' + toISO(bugun()) + '"' + (v.b ? ' min="' + toISO(v.b) + '"' : '') + ' value="' + toISO(v.e) + '" onchange="tarihSec(\'' + k.id + '\',\'e\',this.value)"></div></div>' +
@@ -909,11 +929,12 @@ function vToplu() {
   var h = kuyrukBanner() + '<div class="card stack"><div class="sec" style="margin:0">1 · ' + L('Kalem', 'Item') + '</div><div class="chips" style="flex-wrap:wrap;padding:0">' +
     ks.map(function (x) { return '<button class="chip acc ' + (x.id === k.id ? 'on' : '') + '" onclick="S.tp.k=\'' + x.id + '\';S.tp.sec={};S.tp.f=\'\';viewCiz()">' + esc(kAd(x)) + '</button>'; }).join('') + '</div>' +
     '<div class="sec" style="margin:4px 0 0">2 · ' + L('Yeni durum', 'New status') + '</div><div class="dseg">' + DUR.map(function (d) { return '<button class="' + d + (tp.d === d ? ' on' : '') + '" onclick="S.tp.d=\'' + d + '\';viewCiz()">' + dAd(d) + '</button>'; }).join('') + '</div>' +
-    (k.takip !== 'DURUM' && tp.d === 'DEVAM' ? '<div class="qk">' + ['', 25, 50, 75, 90].map(function (x) { return '<button class="' + (String(tp.y) === String(x) ? 'on' : '') + '" onclick="S.tp.y=\'' + x + '\';viewCiz()">' + (x === '' ? L('% değişmesin', 'Keep %') : '%' + x) + '</button>'; }).join('') + '</div>' : '') +
+    (k.takip !== 'DURUM' && tp.d === 'DEVAM' ? '<div class="qk">' + ['', 25, 50, 75, 90].map(function (x) { return '<button class="' + (String(tp.y) === String(x) ? 'on' : '') + '" onclick="S.tp.y=\'' + x + '\';viewCiz()">' + (x === '' ? L('Aynı kalsın', 'Keep') : '%' + x) + '</button>'; }).join('') + '</div>' : '') +
     (tp.d === 'DEVAM' || tp.d === 'TAMAMLANDI' ? '<div class="frow"><span class="lb">' + L('Firma', 'Company') + (fs.length ? ' *' : '') + '</span>' + (fs.length ? fs : (D.firmalar || []).filter(function (f) { return f.aktif; }).slice(0, 0)).map(function (f) { return '<button class="fchip ' + (tp.f === f.ad ? 'on' : '') + '" onclick="S.tp.f=S.tp.f===' + jq(f.ad) + '?\'\':' + jq(f.ad) + ';viewCiz()">' + esc(f.kisa || f.ad) + '</button>'; }).join('') +
       '<span class="note">' + (fs.length ? L('Boş bırakılırsa villadaki mevcut firma korunur.', 'If empty, the villa’s current company is kept.') : L('Bu kaleme atanmış firma yok.', 'No company assigned to this item.')) + '</span></div>' : '') +
     '</div>' +
     '<div class="grpT"><b>3 · ' + L('Villalar', 'Villas') + ' <span class="t2">(' + secN + '/' + bs.length + ')</span></b><span><button class="lnk" onclick="topluHepsi(true)">' + L('Tümü', 'All') + '</button><button class="lnk" onclick="topluHepsi(false)">' + L('Temizle', 'Clear') + '</button></span></div>' +
+    (bs.length ? '' : '<div class="card mut">' + L('Bu filtrede villa yok. Ada, villa cinsi ya da arama seçimini değiştirin.', 'No villas match this filter. Change the island, villa kind or search.') + '</div>') +
     '<div class="vgrid">' + bs.map(function (b) {
       var s = onayli(b.id, k.id), sel = !!tp.sec[b.id];
       return '<button class="vc ' + (sel ? 'sel' : '') + '" onclick="S.tp.sec[\'' + b.id + '\']=!S.tp.sec[\'' + b.id + '\'];viewCiz()"><span class="ck">' + (sel ? I.ok : '') + '</span>' +
@@ -1021,7 +1042,7 @@ function kulKarar(id, karar) {
 }
 
 /* ================= diğer ================= */
-function altSayfa(s) { if (s === 'bagkod') BAG = null; if (s === 'cihazlar') CIHAZ = null; S.sub = s; try { history.pushState({ p: 'sub' }, ''); SUB_DERIN++; } catch (e) {} if (s === 'rapor') { S.rp.grup = S.rp.grup || S.grup; S.rp.ada = S.rp.ada || S.ada; S.rp.dil = S.rp.dil || S.dil; S.rp.sonuc = null; } render(); }
+function altSayfa(s) { if (s === 'bagkod') BAG = null; if (s === 'cihazlar') CIHAZ = null; S.sub = s; gecmisEkle('sub'); SUB_DERIN++; if (s === 'rapor') { S.rp.grup = S.rp.grup || S.grup; S.rp.ada = S.rp.ada || S.ada; S.rp.dil = S.rp.dil || S.dil; S.rp.sonuc = null; } render(); }
 function geriBas(baslik, sag) {
   return '<div style="display:flex;align-items:center;gap:10px;margin:0 0 12px"><button class="iconbtn" onclick="history.back()" aria-label="' + L('Geri', 'Back') + '">' + I.back + '</button><div class="h grow" style="font-size:24px">' + baslik + '</div>' + (sag || '') + '</div>';
 }
@@ -1106,7 +1127,7 @@ function vFirmalar() {
 function firmaAc(id) {
   var f = id ? (D.firmalar || []).filter(function (x) { return x.id === id; })[0] : null;
   S.fe = f ? kopya(f) : { ad: '', kisa: '', yetkili: '', tel: '', kalemler: [], aktif: true };
-  S.sub = 'firma'; try { history.pushState({ p: 'sub' }, ''); SUB_DERIN++; } catch (e) {} render();
+  S.sub = 'firma'; gecmisEkle('sub'); SUB_DERIN++; render();
 }
 function vFirmaDuzen() {
   var f = S.fe;
@@ -1280,7 +1301,7 @@ function vGps() {
   if (!gpsYetki()) return geriBas(L('GPS kalibrasyonu', 'GPS calibration')) + '<div class="card mut">' + L('Bu ekran yalnızca GPS yetkilisine açık.', 'This screen is only for the GPS owner.') + '</div>';
   var pts = D.gps || [], k = kalibre(pts);
   var h = geriBas(L('GPS kalibrasyonu', 'GPS calibration')) +
-    '<div class="banner info" style="margin-bottom:10px">' + L('Harita çizimi konum olarak yaklaşıktır. Sahada bir villanın yanında dururken haritada o villayı açıp <b>Bu villadayım</b> (iğne simgesi) düğmesine basın. Birbirinden uzak en az 3 villa (tercihen 4–5) ile harita GPS’e hizalanır ve en yakın villa önerilir.', 'The map drawing is only approximately located. On site, stand next to a villa, open it on the map and tap <b>I am at this villa</b> (pin icon). With at least 3 villas far apart (preferably 4–5), the map is aligned to GPS and the nearest villa is suggested.') + '</div>' +
+    '<div class="banner info" style="margin-bottom:10px"><span>' + L('Harita çizimi konum olarak yaklaşıktır. Sahada bir villanın yanında dururken haritada o villayı açıp <b>Bu villadayım</b> (iğne simgesi) düğmesine basın. Birbirinden uzak en az 3 villa (tercihen 4–5) ile harita GPS’e hizalanır ve en yakın villa önerilir.', 'The map drawing is only approximately located. On site, stand next to a villa, open it on the map and tap <b>I am at this villa</b> (pin icon). With at least 3 villas far apart (preferably 4–5), the map is aligned to GPS and the nearest villa is suggested.') + '</span></div>' +
     '<div class="card" style="margin-bottom:10px"><div class="t1">' + (pts.length >= 3 ? L('Hazır', 'Ready') + ' · ' + L('en büyük sapma ', 'max deviation ') + Math.round(k.err) + ' m' : L('Eksik', 'Incomplete') + ' · ' + pts.length + '/3') + '</div><div class="t2">' + (pts.length >= 3 && k.hat ? L('Noktalar neredeyse aynı hat üzerinde; adanın farklı uçlarından ve diğer adadan nokta ekleyin.', 'Points are almost on one line; add points from different ends and the other island.') : pts.length >= 3 && k.err > 15 ? L('Sapma yüksek: hatalı noktayı silip yeniden ölçün.', 'Deviation is high: delete the wrong point and measure again.') : L('Noktalar e-tablodaki Ayarlar sayfasında saklanır; tüm cihazlarda geçerlidir.', 'Points are stored in the Ayarlar sheet and apply to all devices.')) + '</div></div><div class="stack">';
   pts.forEach(function (p, i) {
     h += '<div class="list-row"><span class="ico" style="background:var(--accS);color:var(--acc)">' + esc(p.no) + '</span><div class="grow"><div class="t1">' + L('Villa ', 'Villa ') + esc(p.no) + '</div><div class="t2">±' + Math.round(p.acc || 0) + ' m GPS' + (k.res[i] != null && pts.length >= 3 ? ' · ' + L('sapma ', 'residual ') + num(k.res[i], 1) + ' m' : '') + ' · ' + esc(p.t || '') + ' · ' + esc(p.u || '') + '</div></div><button class="btn sm soft" onclick="gpsSil(' + i + ')">' + L('Sil', 'Delete') + '</button></div>';

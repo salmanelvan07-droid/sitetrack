@@ -1,5 +1,5 @@
 /* MXM SiteTrack service worker — uygulama dosyalarını ve haritayı cihazda saklar */
-var SURUM = 'mxm-sitetrack-1.0.0-5c91e1fe';
+var SURUM = 'mxm-sitetrack-1.0.0-a414cbf7';
 var KABUK = ['./', 'index.html', 'app.js', 'app.css', 'config.js', 'qrcode.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 var BUYUK = ['maplibre-gl.js', 'maplibre-gl.css', 'map.json', 'meta.json', 'ocean.jpg'];
 self.addEventListener('install', function (e) {
